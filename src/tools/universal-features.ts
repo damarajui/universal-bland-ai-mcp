@@ -353,11 +353,17 @@ export function createUniversalFeatureTools(blandClient: BlandAIClient) {
                 throw new Error('phone_number and message required for send action');
               }
               
-              const sendResult = await blandClient.sendSMS(args.phone_number, args.message, args.from_number);
+              const sendResult = await blandClient.sendSMS(
+                args.phone_number, 
+                args.message, 
+                args.from_number,
+                { delivery_tracking: args.track_delivery }
+              );
               
               return {
                 success: true,
-                message_id: sendResult.message_id,
+                conversation_id: sendResult.conversation_id,
+                workflow_id: sendResult.workflow_id,
                 phone_number: args.phone_number,
                 message_length: args.message.length,
                 from_number: args.from_number,
@@ -388,12 +394,14 @@ export function createUniversalFeatureTools(blandClient: BlandAIClient) {
                   const result = await blandClient.sendSMS(
                     recipient.phone_number, 
                     personalizedMessage, 
-                    args.from_number
+                    args.from_number,
+                    recipient.personalization
                   );
                   
                   bulkResults.push({
                     phone_number: recipient.phone_number,
-                    message_id: result.message_id,
+                    conversation_id: result.conversation_id,
+                    workflow_id: result.workflow_id,
                     status: 'sent',
                     message_length: personalizedMessage.length
                   });
@@ -558,25 +566,25 @@ export function createUniversalFeatureTools(blandClient: BlandAIClient) {
 
             case 'list':
               try {
-                const numbers = await blandClient.listNumbers();
-                
-                const categorized = {
-                  local: numbers.filter(n => n.type === 'local'),
-                  toll_free: numbers.filter(n => n.type === 'toll_free'),
-                  mobile: numbers.filter(n => n.type === 'mobile')
-                };
-                
-                return {
-                  success: true,
-                  total_numbers: numbers.length,
-                  breakdown: {
-                    local: categorized.local.length,
-                    toll_free: categorized.toll_free.length,
-                    mobile: categorized.mobile.length
-                  },
-                  numbers: numbers,
-                  monthly_cost_total: numbers.reduce((sum, n) => sum + (n.monthly_cost || 0), 0)
-                };
+              const numbers = await blandClient.listNumbers();
+              
+              const categorized = {
+                local: numbers.filter(n => n.type === 'local'),
+                toll_free: numbers.filter(n => n.type === 'toll_free'),
+                mobile: numbers.filter(n => n.type === 'mobile')
+              };
+              
+              return {
+                success: true,
+                total_numbers: numbers.length,
+                breakdown: {
+                  local: categorized.local.length,
+                  toll_free: categorized.toll_free.length,
+                  mobile: categorized.mobile.length
+                },
+                numbers: numbers,
+                monthly_cost_total: numbers.reduce((sum, n) => sum + (n.monthly_cost || 0), 0)
+              };
               } catch (error: any) {
                 // If the endpoint doesn't exist or access is restricted, return a helpful message
                 if (error.response?.status === 404) {

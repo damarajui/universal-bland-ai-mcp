@@ -34,7 +34,7 @@ interface PathwayNodeData {
   webhookData?: any;
   webhookHeaders?: Array<{ key: string; value: string }>;
   
-  // MISSING: Dynamic Data Integration (from dynamic-data docs)
+  // Dynamic Data Integration (from dynamic-data docs)
   dynamic_data?: Array<{
     url: string;
     method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
@@ -49,19 +49,24 @@ interface PathwayNodeData {
     }>;
   }>;
   
-  // MISSING: Custom Tools Integration (from custom-tools docs)
+  // Custom Tools Integration (from custom-tools docs)
   tools?: Array<{
     name: string;
     description: string;
-    input_schema: any;
+    input_schema: {
+      type: 'object';
+      properties: Record<string, any>;
+      required?: string[];
+      example?: any;
+    };
     speech?: string;
     response_data?: Array<{
       name: string;
-      data: string;
+      data: string; // JSONPath for response extraction
     }>;
   }>;
   
-  // MISSING: Advanced Conditions & Logic
+  // Advanced Conditions & Logic
   advanced_conditions?: {
     if_conditions?: Array<{
       condition: string;
@@ -71,19 +76,36 @@ interface PathwayNodeData {
     fallback_node?: string;
   };
   
-  // MISSING: Voice & Conversation Control
+  // Voice & Conversation Control
   voice_settings?: {
     voice_id?: string | number;
     speed?: number;
     interruption_threshold?: number;
+    reduce_latency?: boolean;
   };
   
-  // MISSING: Call Flow Control
+  // Call Flow Control
   call_settings?: {
     max_duration?: number;
-    reduce_latency?: boolean;
     record?: boolean;
     wait_for_greeting?: boolean;
+    language?: string;
+    answered_by_enabled?: boolean;
+  };
+  
+  // Knowledge Base Integration
+  knowledge_base?: {
+    kb_id?: string;
+    content?: string;
+    search_mode?: 'semantic' | 'keyword' | 'hybrid';
+    confidence_threshold?: number;
+  };
+  
+  // Wait for Response Configuration
+  wait_config?: {
+    timeout_seconds?: number;
+    max_attempts?: number;
+    fallback_action?: 'transfer' | 'end' | 'repeat';
   };
 }
 
@@ -126,54 +148,87 @@ export function createPathwayTools(blandClient: BlandAIClient) {
           update_endpoint: z.string().optional()
         }).optional(),
         
-        // Dynamic Data Sources
+        // Dynamic Data Sources (Real-time API calls during conversation)
         data_sources: z.array(z.object({
           name: z.string(),
           url: z.string(),
           method: z.enum(['GET', 'POST', 'PATCH', 'DELETE']).default('GET'),
           headers: z.record(z.string()).optional(),
+          query: z.record(z.any()).optional(),
+          body: z.any().optional(),
+          cache: z.boolean().default(true),
           response_mapping: z.array(z.object({
             variable_name: z.string(),
-            json_path: z.string(),
-            description: z.string()
+            json_path: z.string(), // e.g., "$.calls[0].c_id"
+            context_description: z.string() // How this variable will be used
           }))
         })).optional(),
         
-        // Custom Tools
+        // Custom Tools (API integrations executable during calls)
         custom_tools: z.array(z.object({
           name: z.string(),
           description: z.string(),
           api_endpoint: z.string(),
-          input_fields: z.array(z.object({
-            field_name: z.string(),
-            field_type: z.string(),
-            description: z.string()
-          })),
-          output_mapping: z.array(z.object({
+          input_schema: z.object({
+            type: z.literal('object'),
+            properties: z.record(z.any()),
+            required: z.array(z.string()).optional(),
+            example: z.any().optional()
+          }),
+          speech: z.string().optional(), // What AI says while executing tool
+          response_data: z.array(z.object({
             variable_name: z.string(),
-            json_path: z.string()
+            json_path: z.string() // Extract data from tool response
           }))
         })).optional(),
         
-        // Fine-tuning Examples
+        // Fine-tuning Examples (Train the pathway behavior)
         training_examples: z.array(z.object({
+          scenario: z.string(),
           user_input: z.string(),
-          expected_action: z.string(),
-          target_node: z.string().optional()
+          expected_node: z.string(),
+          expected_response: z.string(),
+          extracted_variables: z.record(z.string()).optional()
         })).optional(),
         
-        // Advanced Settings
+        // Knowledge Base Integration
+        knowledge_bases: z.array(z.object({
+          kb_id: z.string().optional(),
+          content: z.string().optional(),
+          search_mode: z.enum(['semantic', 'keyword', 'hybrid']).default('semantic'),
+          confidence_threshold: z.number().min(0).max(1).default(0.7)
+        })).optional(),
+        
+        // Advanced Voice Settings
         voice_settings: z.object({
           voice_id: z.union([z.string(), z.number()]).optional(),
           speed: z.number().min(0.5).max(2.0).optional(),
-          interruption_threshold: z.number().min(0).max(100).optional()
+          interruption_threshold: z.number().min(0).max(100).optional(),
+          reduce_latency: z.boolean().default(true)
         }).optional(),
         
+        // Call Configuration
         call_settings: z.object({
           max_duration: z.number().min(1).max(60).optional(),
-          reduce_latency: z.boolean().default(true),
           record: z.boolean().default(true),
-          wait_for_greeting: z.boolean().default(true)
+          wait_for_greeting: z.boolean().default(true),
+          language: z.string().default('ENG'),
+          answered_by_enabled: z.boolean().default(true)
+        }).optional(),
+        
+        // Transfer Configuration
+        transfer_settings: z.object({
+          primary_number: z.string().optional(),
+          fallback_number: z.string().optional(),
+          transfer_conditions: z.array(z.string()).optional()
+        }).optional(),
+        
+        // Webhook Integration
+        webhook_settings: z.object({
+          url: z.string(),
+          method: z.enum(['POST', 'PUT', 'PATCH']).default('POST'),
+          headers: z.record(z.string()).optional(),
+          events: z.array(z.enum(['node_entry', 'variable_extraction', 'tool_execution', 'transfer', 'end_call'])).optional()
         }).optional()
       }),
       handler: async (args: any) => {
@@ -181,7 +236,7 @@ export function createPathwayTools(blandClient: BlandAIClient) {
           // Create basic pathway
           const basicPathway = await blandClient.createPathway(args.name, args.description);
           
-          // Build ultra-advanced structure with all features
+          // Build ultra-advanced structure with ALL features
           const advancedStructure = buildUltraAdvancedPathway(args);
           
           // Update with complete structure
@@ -201,21 +256,28 @@ export function createPathwayTools(blandClient: BlandAIClient) {
               dynamic_data_sources: args.data_sources?.length || 0,
               custom_tools: args.custom_tools?.length || 0,
               training_examples: args.training_examples?.length || 0,
+              knowledge_bases: args.knowledge_bases?.length || 0,
               crm_integration: !!args.crm_integration,
               voice_customization: !!args.voice_settings,
               call_optimization: !!args.call_settings,
+              webhook_integration: !!args.webhook_settings,
+              transfer_logic: !!args.transfer_settings,
               nodes_created: advancedStructure.nodes.length,
               edges_created: advancedStructure.edges.length
             },
             capabilities: [
               'Real-time CRM data lookup and updates',
-              'Dynamic external API integration',
-              'Custom tool execution during calls',
-              'Fine-tuned conversation routing',
+              'Dynamic external API integration during calls',
+              'Custom tool execution with response mapping',
+              'Fine-tuned conversation routing with examples',
               'Advanced voice and call control',
               'Multi-condition branching logic',
               'Context-aware variable extraction',
-              'Intelligent fallback handling'
+              'Intelligent fallback handling',
+              'Knowledge base semantic search',
+              'Webhook events at every stage',
+              'Complex transfer routing logic',
+              'Real-time data injection'
             ]
           };
         } catch (error: any) {
@@ -1463,7 +1525,7 @@ function buildCustomWorkflowPathway(args: any): CompletePathway {
   });
 
   return { name: args.name, description: args.workflow_description, nodes, edges };
-}
+} 
 
 // ULTRA-ADVANCED pathway builder with ALL Bland AI features
 function buildUltraAdvancedPathway(args: any): CompletePathway {
@@ -1509,19 +1571,9 @@ function buildUltraAdvancedPathway(args: any): CompletePathway {
        tools: args.custom_tools?.map((tool: any) => ({
          name: tool.name,
          description: tool.description,
-         input_schema: {
-           type: 'object',
-           properties: tool.input_fields.reduce((acc: any, field: any) => {
-             acc[field.field_name] = { type: field.field_type, description: field.description };
-             return acc;
-           }, {}),
-           required: tool.input_fields.map((f: any) => f.field_name)
-         },
-         speech: `Using ${tool.name} to ${tool.description}...`,
-         response_data: tool.output_mapping.map((output: any) => ({
-           name: output.variable_name,
-           data: output.json_path
-         }))
+         input_schema: tool.input_schema,
+         speech: tool.speech || `Using ${tool.name} to ${tool.description}...`,
+         response_data: tool.response_data || []
        })),
       
       // Advanced Voice Settings
@@ -1533,7 +1585,7 @@ function buildUltraAdvancedPathway(args: any): CompletePathway {
              // Fine-tuning Examples
        pathwayExamples: args.training_examples?.map((example: any) => ({
          userInput: example.user_input,
-         pathway: example.target_node || 'ultra_analysis'
+         pathway: example.expected_node || 'ultra_analysis'
        })),
       
       // Variable Extraction

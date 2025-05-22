@@ -596,8 +596,8 @@ export class BlandAIClient {
   // SMS Management
   async listSMSNumbers(): Promise<BlandPhoneNumber[]> {
     try {
-      const response = await this.client.get('/sms/numbers');
-      return response.data.numbers || [];
+      const response = await this.client.get('/sms-numbers');
+      return response.data || [];
     } catch (error: any) {
       console.error('List SMS numbers error:', error.message);
       throw error;
@@ -614,11 +614,17 @@ export class BlandAIClient {
     }
   }
 
-  async sendSMS(phoneNumber: string, message: string, from?: string): Promise<{ message_id: string }> {
+  async sendSMS(userNumber: string, agentMessage: string, agentNumber?: string, requestData?: any): Promise<{ conversation_id: string; workflow_id: string }> {
     try {
-      const payload = { phone_number: phoneNumber, message, ...(from && { from }) };
+      const payload: any = { 
+        user_number: userNumber, 
+        agent_message: agentMessage 
+      };
+      if (agentNumber) payload.agent_number = agentNumber;
+      if (requestData) payload.request_data = requestData;
+      
       const response = await this.client.post('/sms/send', payload);
-      return response.data;
+      return response.data.data;
     } catch (error: any) {
       console.error('Send SMS error:', error.message);
       throw error;

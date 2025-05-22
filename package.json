@@ -1,0 +1,98 @@
+{
+  "name": "universal-bland-ai-mcp-server",
+  "version": "1.0.0",
+  "description": "Model Context Protocol server for Bland AI voice calling platform",
+  "type": "module",
+  "main": "build/index.js",
+  "bin": {
+    "universal-bland-mcp": "./build/index.js"
+  },
+  "scripts": {
+    "build": "tsc && chmod +x build/index.js",
+    "build:production": "NODE_ENV=production npm run build",
+    "dev": "tsx src/index.ts",
+    "start": "node build/index.js",
+    "start:production": "NODE_ENV=production npm start",
+    "watch": "nodemon --exec tsx src/index.ts",
+    "test": "echo \"Test suite not implemented yet\" && exit 0",
+    "test:integration": "npm run test",
+    "lint": "eslint src --ext .ts,.tsx",
+    "lint:fix": "npm run lint -- --fix",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf build",
+    "check-updates": "npm outdated",
+    "docker:build": "docker build -t universal-bland-mcp:latest .",
+    "docker:run": "docker run -p 3000:3000 --env-file .env universal-bland-mcp:latest",
+    "docker:production": "docker build -t universal-bland-mcp:production . && docker run -p 3000:3000 -e NODE_ENV=production universal-bland-mcp:production",
+    "mcp:test": "echo '{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"tools/list\", \"params\": {}}' | node build/index.js",
+    "mcp:inspector": "npx @modelcontextprotocol/inspector build/index.js",
+    "health-check": "curl -f http://localhost:3000/health || exit 1"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "bland-ai",
+    "voice-ai",
+    "ai-calling",
+    "automation",
+    "natural-language",
+    "claude",
+    "cursor",
+    "llm"
+  ],
+  "author": {
+    "name": "Inaan Damaraju",
+    "email": "inaandamaraju02@gmail.com"
+  },
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/inaandamaraju/universal-bland-ai-mcp"
+  },
+  "bugs": {
+    "url": "https://github.com/inaandamaraju/universal-bland-ai-mcp/issues"
+  },
+  "homepage": "https://github.com/inaandamaraju/universal-bland-ai-mcp#readme",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "axios": "^1.9.0",
+    "dotenv": "^16.5.0",
+    "zod": "^3.25.20"
+  },
+  "devDependencies": {
+    "@types/axios": "^0.14.4",
+    "@types/node": "^22.15.21",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "nodemon": "^3.1.10",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  },
+  "peerDependencies": {
+    "@modelcontextprotocol/inspector": "^1.0.0"
+  },
+  "config": {
+    "port": 3000,
+    "logLevel": "info"
+  },
+  "enterprise": {
+    "features": {
+      "multiTenant": true,
+      "rateLimiting": true,
+      "auditLogging": true,
+      "monitoring": true,
+      "scaling": true
+    },
+    "deployment": {
+      "docker": true,
+      "kubernetes": true,
+      "cloudFormation": true,
+      "terraform": true
+    }
+  }
+}

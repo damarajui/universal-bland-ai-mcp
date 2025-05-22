@@ -1,0 +1,773 @@
+import axios, { AxiosInstance } from 'axios';
+import { 
+  BlandCall, BlandPathway, BlandTool, BlandKnowledgeBase, BlandVoice, 
+  BlandWebAgent, BlandBatch, BlandSMS, BlandSMSConversation, BlandPhoneNumber,
+  BlandOrganization, BlandPrompt, BlandAnalysis, CallOptions, BatchCallOptions 
+} from '../types/bland.js';
+
+export class BlandAIClient {
+  private client: AxiosInstance;
+  private apiKey: string;
+  private orgId?: string;
+
+  constructor(apiKey: string, orgId?: string) {
+    this.apiKey = apiKey;
+    this.orgId = orgId;
+    
+    this.client = axios.create({
+      baseURL: 'https://api.bland.ai/v1',
+      headers: {
+        'Authorization': apiKey,
+        'Content-Type': 'application/json',
+        ...(orgId && { 'Org-Id': orgId })
+      }
+    });
+
+    // Add request logging for debugging
+    this.client.interceptors.request.use(request => {
+      console.error(`Request to: ${request.method?.toUpperCase()} ${request.baseURL}${request.url}`);
+      return request;
+    });
+
+    // Add response logging for debugging
+    this.client.interceptors.response.use(
+      response => {
+        console.error(`Response from ${response.config.url}: ${response.status}`);
+        return response;
+      },
+      error => {
+        console.error('API Error:', error.message);
+        if (error.response) {
+          console.error('Status:', error.response.status);
+        }
+        return Promise.reject(error);
+      }
+    );
+  }
+
+  // Call Management
+  async startCall(options: CallOptions): Promise<BlandCall> {
+    try {
+      const response = await this.client.post('/calls', options);
+      return response.data;
+    } catch (error: any) {
+      console.error('Start call error:', error.message);
+      if (error.response?.data) {
+        console.error('API response:', error.response.data);
+      }
+      throw error;
+    }
+  }
+
+  async startBatchCall(options: BatchCallOptions): Promise<{ batch_id: string; calls: BlandCall[] }> {
+    try {
+      const response = await this.client.post('/batches/create', options);
+      return response.data;
+    } catch (error: any) {
+      console.error('Start batch call error:', error.message);
+      if (error.response?.data) {
+        console.error('API response:', error.response.data);
+      }
+      throw error;
+    }
+  }
+
+  async getCall(callId: string): Promise<BlandCall> {
+    try {
+      const response = await this.client.get(`/calls/${callId}`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Get call error for ID ${callId}:`, error.message);
+      throw error;
+    }
+  }
+
+  async stopCall(callId: string): Promise<{ success: boolean }> {
+    try {
+      const response = await this.client.post(`/calls/${callId}/stop`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Stop call error for ID ${callId}:`, error.message);
+      throw error;
+    }
+  }
+
+  async stopAllCalls(): Promise<{ success: boolean; stopped_calls: string[] }> {
+    try {
+      const response = await this.client.post('/calls/stop-all');
+      return response.data;
+    } catch (error: any) {
+      console.error('Stop all calls error:', error.message);
+      throw error;
+    }
+  }
+
+  async listCalls(limit = 50): Promise<BlandCall[]> {
+    try {
+      const response = await this.client.get(`/calls?limit=${limit}`);
+      return response.data.calls || [];
+    } catch (error: any) {
+      console.error('List calls error:', error.message);
+      throw error;
+    }
+  }
+
+  // Pathway Management
+  async createPathway(name: string, description?: string): Promise<{ status: string; pathway_id: string }> {
+    try {
+      const payload = {
+        name,
+        description: description || `Pathway: ${name}`
+      };
+      
+      const response = await this.client.post('/pathway/create', payload);
+      
+      if (response.data.data && response.data.data.pathway_id) {
+        return {
+          status: 'success',
+          pathway_id: response.data.data.pathway_id
+        };
+      } else {
+        throw new Error('Invalid response structure: pathway_id not found');
+      }
+    } catch (error: any) {
+      console.error('Create pathway error:', error.message);
+      throw error;
+    }
+  }
+
+  async getPathway(pathwayId: string): Promise<BlandPathway> {
+    try {
+      const response = await this.client.get(`/pathway/${pathwayId}`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Get pathway error for ID ${pathwayId}:`, error.message);
+      throw error;
+    }
+  }
+
+  async listPathways(): Promise<BlandPathway[]> {
+    try {
+      const response = await this.client.get('/pathway');
+      return response.data.pathways || [];
+    } catch (error: any) {
+      console.error('List pathways error:', error.message);
+      throw error;
+    }
+  }
+
+  async updatePathway(
+    pathwayId: string, 
+    name?: string, 
+    description?: string, 
+    nodes?: any[], 
+    edges?: any[]
+  ): Promise<{ status: string; message: string; pathway_data: any }> {
+    try {
+      const payload: any = {};
+      
+      if (name) payload.name = name;
+      if (description) payload.description = description;
+      if (nodes) payload.nodes = nodes;
+      if (edges) payload.edges = edges;
+      
+      const response = await this.client.post(`/pathway/${pathwayId}`, payload);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Update pathway error for ID ${pathwayId}:`, error.message);
+      throw error;
+    }
+  }
+
+  async deletePathway(pathwayId: string): Promise<{ success: boolean }> {
+    try {
+      const response = await this.client.delete(`/pathway/${pathwayId}`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Delete pathway error for ID ${pathwayId}:`, error.message);
+      throw error;
+    }
+  }
+
+  // Tool Management
+  async createTool(tool: Omit<BlandTool, 'tool_id'>): Promise<BlandTool> {
+    try {
+      const response = await this.client.post('/tools', tool);
+      return response.data;
+    } catch (error: any) {
+      console.error('Create tool error:', error.message);
+      throw error;
+    }
+  }
+
+  async listTools(): Promise<BlandTool[]> {
+    try {
+      const response = await this.client.get('/tools');
+      return response.data.tools || [];
+    } catch (error: any) {
+      console.error('List tools error:', error.message);
+      throw error;
+    }
+  }
+
+  // Analysis & Intelligence  
+  async getCallTranscript(callId: string): Promise<any> {
+    try {
+      const response = await this.client.get(`/calls/${callId}/correct`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Get transcript error for call ID ${callId}:`, error.message);
+      throw error;
+    }
+  }
+
+  async analyzeCall(callId: string, goal?: string, questions?: string[][]): Promise<{ summary: string; sentiment: string; keywords: string[] }> {
+    try {
+      const payload: any = {};
+      
+      if (goal) {
+        payload.goal = goal;
+      }
+      
+      if (questions && questions.length > 0) {
+        payload.questions = questions;
+      } else {
+        payload.questions = [
+          ["Who answered the call?", "human or voicemail"],
+          ["What was the overall sentiment?", "positive, negative, or neutral"],
+          ["What were the main topics discussed?", "string"],
+          ["Was the call objective achieved?", "boolean"]
+        ];
+      }
+      
+      const response = await this.client.post(`/calls/${callId}/analyze`, payload);
+      return {
+        summary: response.data.answers ? response.data.answers.join('; ') : 'Analysis completed',
+        sentiment: response.data.answers && response.data.answers[1] ? response.data.answers[1] : 'neutral',
+        keywords: response.data.answers && response.data.answers[2] ? [response.data.answers[2]] : []
+      };
+    } catch (error: any) {
+      console.error(`Analyze call error for ID ${callId}:`, error.message);
+      throw error;
+    }
+  }
+
+  async analyzeCallEmotions(callId: string): Promise<BlandAnalysis> {
+    try {
+      const response = await this.client.post('/intelligence/emotions', {
+        callId: callId
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error(`Analyze emotions error for call ID ${callId}:`, error.message);
+      throw error;
+    }
+  }
+
+  async getCallRecording(callId: string): Promise<{ recording_url: string }> {
+    try {
+      const response = await this.client.get(`/calls/${callId}/recording`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Get recording error for call ID ${callId}:`, error.message);
+      throw error;
+    }
+  }
+
+  // Knowledge Base Management
+  async createKnowledgeBase(name: string, description?: string): Promise<{ kb_id: string; status: string }> {
+    try {
+      const response = await this.client.post('/knowledge-bases', { name, description });
+      return response.data;
+    } catch (error: any) {
+      console.error('Create knowledge base error:', error.message);
+      throw error;
+    }
+  }
+
+  async uploadKnowledgeBaseText(kbId: string, text: string, metadata?: any): Promise<{ success: boolean }> {
+    try {
+      const response = await this.client.post(`/knowledge-bases/${kbId}/upload-text`, { text, metadata });
+      return response.data;
+    } catch (error: any) {
+      console.error(`Upload text error for KB ${kbId}:`, error.message);
+      throw error;
+    }
+  }
+
+  async uploadKnowledgeBaseMedia(kbId: string, mediaUrl: string, metadata?: any): Promise<{ success: boolean }> {
+    try {
+      const response = await this.client.post(`/knowledge-bases/${kbId}/upload-media`, { media_url: mediaUrl, metadata });
+      return response.data;
+    } catch (error: any) {
+      console.error(`Upload media error for KB ${kbId}:`, error.message);
+      throw error;
+    }
+  }
+
+  async listKnowledgeBases(): Promise<BlandKnowledgeBase[]> {
+    try {
+      const response = await this.client.get('/knowledge-bases');
+      return response.data.knowledge_bases || [];
+    } catch (error: any) {
+      console.error('List knowledge bases error:', error.message);
+      throw error;
+    }
+  }
+
+  async getKnowledgeBase(kbId: string): Promise<BlandKnowledgeBase> {
+    try {
+      const response = await this.client.get(`/knowledge-bases/${kbId}`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Get knowledge base error for ID ${kbId}:`, error.message);
+      throw error;
+    }
+  }
+
+  async updateKnowledgeBase(kbId: string, updates: Partial<BlandKnowledgeBase>): Promise<{ success: boolean }> {
+    try {
+      const response = await this.client.patch(`/knowledge-bases/${kbId}`, updates);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Update knowledge base error for ID ${kbId}:`, error.message);
+      throw error;
+    }
+  }
+
+  async deleteKnowledgeBase(kbId: string): Promise<{ success: boolean }> {
+    try {
+      const response = await this.client.delete(`/knowledge-bases/${kbId}`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Delete knowledge base error for ID ${kbId}:`, error.message);
+      throw error;
+    }
+  }
+
+  // Voice Management
+  async cloneVoice(name: string, audioUrl: string, description?: string): Promise<{ voice_id: string; status: string }> {
+    try {
+      const response = await this.client.post('/voices', { name, audio_url: audioUrl, description });
+      return response.data;
+    } catch (error: any) {
+      console.error('Clone voice error:', error.message);
+      throw error;
+    }
+  }
+
+  async listVoices(): Promise<BlandVoice[]> {
+    try {
+      const response = await this.client.get('/voices');
+      return response.data.voices || [];
+    } catch (error: any) {
+      console.error('List voices error:', error.message);
+      throw error;
+    }
+  }
+
+  async getVoice(voiceId: string): Promise<BlandVoice> {
+    try {
+      const response = await this.client.get(`/voices/${voiceId}`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Get voice error for ID ${voiceId}:`, error.message);
+      throw error;
+    }
+  }
+
+  async renameVoice(voiceId: string, name: string): Promise<{ success: boolean }> {
+    try {
+      const response = await this.client.patch(`/voices/${voiceId}`, { name });
+      return response.data;
+    } catch (error: any) {
+      console.error(`Rename voice error for ID ${voiceId}:`, error.message);
+      throw error;
+    }
+  }
+
+  async deleteVoice(voiceId: string): Promise<{ success: boolean }> {
+    try {
+      const response = await this.client.delete(`/voices/${voiceId}`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Delete voice error for ID ${voiceId}:`, error.message);
+      throw error;
+    }
+  }
+
+  async publishVoice(voiceId: string): Promise<{ success: boolean }> {
+    try {
+      const response = await this.client.post(`/voices/${voiceId}/publish`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Publish voice error for ID ${voiceId}:`, error.message);
+      throw error;
+    }
+  }
+
+  async generateAudioSample(voiceId: string, text: string): Promise<{ audio_url: string }> {
+    try {
+      const response = await this.client.post(`/voices/${voiceId}/generate-sample`, { text });
+      return response.data;
+    } catch (error: any) {
+      console.error(`Generate sample error for voice ID ${voiceId}:`, error.message);
+      throw error;
+    }
+  }
+
+  // Advanced Tool Management
+  async updateTool(toolId: string, updates: Partial<BlandTool>): Promise<{ success: boolean }> {
+    try {
+      const response = await this.client.post(`/tools/${toolId}`, updates);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Update tool error for ID ${toolId}:`, error.message);
+      throw error;
+    }
+  }
+
+  async deleteTool(toolId: string): Promise<{ success: boolean }> {
+    try {
+      const response = await this.client.delete(`/tools/${toolId}`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Delete tool error for ID ${toolId}:`, error.message);
+      throw error;
+    }
+  }
+
+  async getTool(toolId: string): Promise<BlandTool> {
+    try {
+      const response = await this.client.get(`/tools/${toolId}`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Get tool error for ID ${toolId}:`, error.message);
+      throw error;
+    }
+  }
+
+  // Web Agent Management
+  async createWebAgent(config: Partial<BlandWebAgent>): Promise<{ agent_id: string; agent: BlandWebAgent }> {
+    try {
+      const response = await this.client.post('/agents', config);
+      return response.data;
+    } catch (error: any) {
+      console.error('Create web agent error:', error.message);
+      throw error;
+    }
+  }
+
+  async updateWebAgent(agentId: string, updates: Partial<BlandWebAgent>): Promise<{ success: boolean }> {
+    try {
+      const response = await this.client.post(`/agents/${agentId}`, updates);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Update web agent error for ID ${agentId}:`, error.message);
+      throw error;
+    }
+  }
+
+  async authorizeWebAgentCall(agentId: string, sessionData?: any): Promise<{ session_token: string }> {
+    try {
+      const response = await this.client.post(`/agents/${agentId}/authorize`, sessionData);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Authorize web agent call error for ID ${agentId}:`, error.message);
+      throw error;
+    }
+  }
+
+  async deleteWebAgent(agentId: string): Promise<{ success: boolean }> {
+    try {
+      const response = await this.client.delete(`/agents/${agentId}`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Delete web agent error for ID ${agentId}:`, error.message);
+      throw error;
+    }
+  }
+
+  async listWebAgents(): Promise<BlandWebAgent[]> {
+    try {
+      const response = await this.client.get('/agents');
+      return response.data.agents || [];
+    } catch (error: any) {
+      console.error('List web agents error:', error.message);
+      throw error;
+    }
+  }
+
+  // Batch Operations
+  async createBatch(phoneNumbers: string[], options: Partial<CallOptions>): Promise<{ batch_id: string }> {
+    try {
+      const payload = {
+        phone_numbers: phoneNumbers,
+        ...options
+      };
+      const response = await this.client.post('/batches/create', payload);
+      return response.data;
+    } catch (error: any) {
+      console.error('Create batch error:', error.message);
+      throw error;
+    }
+  }
+
+  async getBatch(batchId: string): Promise<BlandBatch> {
+    try {
+      const response = await this.client.get(`/batches/${batchId}`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Get batch error for ID ${batchId}:`, error.message);
+      throw error;
+    }
+  }
+
+  async listBatches(): Promise<BlandBatch[]> {
+    try {
+      const response = await this.client.get('/batches');
+      return response.data.batches || [];
+    } catch (error: any) {
+      console.error('List batches error:', error.message);
+      throw error;
+    }
+  }
+
+  async getBatchLogs(batchId: string): Promise<{ logs: any[] }> {
+    try {
+      const response = await this.client.get(`/batches/${batchId}/logs`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Get batch logs error for ID ${batchId}:`, error.message);
+      throw error;
+    }
+  }
+
+  async stopBatch(batchId: string): Promise<{ success: boolean }> {
+    try {
+      const response = await this.client.post(`/batches/${batchId}/stop`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Stop batch error for ID ${batchId}:`, error.message);
+      throw error;
+    }
+  }
+
+  // SMS Management
+  async listSMSNumbers(): Promise<BlandPhoneNumber[]> {
+    try {
+      const response = await this.client.get('/sms/numbers');
+      return response.data.numbers || [];
+    } catch (error: any) {
+      console.error('List SMS numbers error:', error.message);
+      throw error;
+    }
+  }
+
+  async updateSMSConfiguration(phoneNumber: string, config: any): Promise<{ success: boolean }> {
+    try {
+      const response = await this.client.post('/sms/configure', { phone_number: phoneNumber, ...config });
+      return response.data;
+    } catch (error: any) {
+      console.error('Update SMS configuration error:', error.message);
+      throw error;
+    }
+  }
+
+  async sendSMS(phoneNumber: string, message: string, from?: string): Promise<{ message_id: string }> {
+    try {
+      const payload = { phone_number: phoneNumber, message, ...(from && { from }) };
+      const response = await this.client.post('/sms/send', payload);
+      return response.data;
+    } catch (error: any) {
+      console.error('Send SMS error:', error.message);
+      throw error;
+    }
+  }
+
+  async listSMSConversations(): Promise<BlandSMSConversation[]> {
+    try {
+      const response = await this.client.get('/sms/conversations');
+      return response.data.conversations || [];
+    } catch (error: any) {
+      console.error('List SMS conversations error:', error.message);
+      throw error;
+    }
+  }
+
+  async getSMSConversation(conversationId: string): Promise<BlandSMSConversation> {
+    try {
+      const response = await this.client.get(`/sms/conversations/${conversationId}`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Get SMS conversation error for ID ${conversationId}:`, error.message);
+      throw error;
+    }
+  }
+
+  async deleteSMSMessages(conversationId: string, messageIds?: string[]): Promise<{ success: boolean }> {
+    try {
+      const payload = messageIds ? { message_ids: messageIds } : {};
+      const response = await this.client.delete(`/sms/conversations/${conversationId}/messages`, { data: payload });
+      return response.data;
+    } catch (error: any) {
+      console.error(`Delete SMS messages error for conversation ${conversationId}:`, error.message);
+      throw error;
+    }
+  }
+
+  async deleteSMSConversation(conversationId: string): Promise<{ success: boolean }> {
+    try {
+      const response = await this.client.delete(`/sms/conversations/${conversationId}`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Delete SMS conversation error for ID ${conversationId}:`, error.message);
+      throw error;
+    }
+  }
+
+  // Phone Number Management
+  async purchasePhoneNumber(areaCode?: string, phoneNumber?: string): Promise<{ number_id: string; phone_number: string }> {
+    try {
+      const payload = { ...(areaCode && { area_code: areaCode }), ...(phoneNumber && { phone_number: phoneNumber }) };
+      const response = await this.client.post('/numbers/purchase', payload);
+      return response.data;
+    } catch (error: any) {
+      console.error('Purchase phone number error:', error.message);
+      throw error;
+    }
+  }
+
+  async updateInboundNumber(phoneNumber: string, config: any): Promise<{ success: boolean }> {
+    try {
+      const response = await this.client.post('/numbers/update-inbound', { phone_number: phoneNumber, ...config });
+      return response.data;
+    } catch (error: any) {
+      console.error('Update inbound number error:', error.message);
+      throw error;
+    }
+  }
+
+  async listNumbers(): Promise<BlandPhoneNumber[]> {
+    try {
+      const response = await this.client.get('/numbers');
+      return response.data.numbers || [];
+    } catch (error: any) {
+      console.error('List numbers error:', error.message);
+      throw error;
+    }
+  }
+
+  async getNumber(numberId: string): Promise<BlandPhoneNumber> {
+    try {
+      const response = await this.client.get(`/numbers/${numberId}`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Get number error for ID ${numberId}:`, error.message);
+      throw error;
+    }
+  }
+
+  // Prompt Management
+  async listPrompts(): Promise<BlandPrompt[]> {
+    try {
+      const response = await this.client.get('/prompts');
+      return response.data.prompts || [];
+    } catch (error: any) {
+      console.error('List prompts error:', error.message);
+      throw error;
+    }
+  }
+
+  async getPrompt(promptId: string): Promise<BlandPrompt> {
+    try {
+      const response = await this.client.get(`/prompts/${promptId}`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Get prompt error for ID ${promptId}:`, error.message);
+      throw error;
+    }
+  }
+
+  async createPrompt(name: string, content: string, description?: string): Promise<{ prompt_id: string }> {
+    try {
+      const response = await this.client.post('/prompts', { name, content, description });
+      return response.data;
+    } catch (error: any) {
+      console.error('Create prompt error:', error.message);
+      throw error;
+    }
+  }
+
+  // Account Management
+  async getAccountDetails(): Promise<{ account: any }> {
+    try {
+      const response = await this.client.get('/account');
+      return response.data;
+    } catch (error: any) {
+      console.error('Get account details error:', error.message);
+      throw error;
+    }
+  }
+
+  // Organization Management
+  async createOrganization(name: string, config?: any): Promise<{ org_id: string }> {
+    try {
+      const response = await this.client.post('/organizations', { name, ...config });
+      return response.data;
+    } catch (error: any) {
+      console.error('Create organization error:', error.message);
+      throw error;
+    }
+  }
+
+  async getOrganization(orgId: string): Promise<BlandOrganization> {
+    try {
+      const response = await this.client.get(`/organizations/${orgId}`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Get organization error for ID ${orgId}:`, error.message);
+      throw error;
+    }
+  }
+
+  async deleteOrganization(orgId: string): Promise<{ success: boolean }> {
+    try {
+      const response = await this.client.delete(`/organizations/${orgId}`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Delete organization error for ID ${orgId}:`, error.message);
+      throw error;
+    }
+  }
+
+  async getOrganizationMembers(orgId: string): Promise<{ members: any[] }> {
+    try {
+      const response = await this.client.get(`/organizations/${orgId}/members`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Get organization members error for ID ${orgId}:`, error.message);
+      throw error;
+    }
+  }
+
+  async updateOrganizationMembers(orgId: string, updates: any): Promise<{ success: boolean }> {
+    try {
+      const response = await this.client.patch(`/organizations/${orgId}/members`, updates);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Update organization members error for ID ${orgId}:`, error.message);
+      throw error;
+    }
+  }
+
+  async getOrganizationBilling(orgId: string): Promise<{ billing: any }> {
+    try {
+      const response = await this.client.get(`/organizations/${orgId}/billing`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Get organization billing error for ID ${orgId}:`, error.message);
+      throw error;
+    }
+  }
+} 

@@ -2,24 +2,21 @@ import axios, { AxiosInstance } from 'axios';
 import { 
   BlandCall, BlandPathway, BlandTool, BlandKnowledgeBase, BlandVoice, 
   BlandWebAgent, BlandBatch, BlandSMS, BlandSMSConversation, BlandPhoneNumber,
-  BlandOrganization, BlandPrompt, BlandAnalysis, CallOptions, BatchCallOptions 
+  BlandPrompt, BlandAnalysis, CallOptions, BatchCallOptions 
 } from '../types/bland.js';
 
 export class BlandAIClient {
   private client: AxiosInstance;
   private apiKey: string;
-  private orgId?: string;
 
-  constructor(apiKey: string, orgId?: string) {
+  constructor(apiKey: string) {
     this.apiKey = apiKey;
-    this.orgId = orgId;
     
     this.client = axios.create({
       baseURL: 'https://api.bland.ai/v1',
       headers: {
         'Authorization': apiKey,
-        'Content-Type': 'application/json',
-        ...(orgId && { 'Org-Id': orgId })
+        'Content-Type': 'application/json'
       }
     });
 
@@ -535,8 +532,7 @@ export class BlandAIClient {
       const response = await axios.post('https://api.bland.ai/v2/batches/create', payload, {
         headers: {
           'Authorization': this.apiKey,
-          'Content-Type': 'application/json',
-          ...(this.orgId && { 'Org-Id': this.orgId })
+          'Content-Type': 'application/json'
         }
       });
       return { batch_id: response.data.data.batch_id };
@@ -552,8 +548,7 @@ export class BlandAIClient {
       const response = await axios.get(`https://api.bland.ai/v2/batches/${batchId}`, {
         headers: {
           'Authorization': this.apiKey,
-          'Content-Type': 'application/json',
-          ...(this.orgId && { 'Org-Id': this.orgId })
+          'Content-Type': 'application/json'
         }
       });
       return response.data.data;
@@ -756,64 +751,5 @@ export class BlandAIClient {
     }
   }
 
-  // Organization Management
-  async createOrganization(name: string, config?: any): Promise<{ org_id: string }> {
-    try {
-      const response = await this.client.post('/organizations', { name, ...config });
-      return response.data;
-    } catch (error: any) {
-      console.error('Create organization error:', error.message);
-      throw error;
-    }
-  }
 
-  async getOrganization(orgId: string): Promise<BlandOrganization> {
-    try {
-      const response = await this.client.get(`/organizations/${orgId}`);
-      return response.data;
-    } catch (error: any) {
-      console.error(`Get organization error for ID ${orgId}:`, error.message);
-      throw error;
-    }
-  }
-
-  async deleteOrganization(orgId: string): Promise<{ success: boolean }> {
-    try {
-      const response = await this.client.delete(`/organizations/${orgId}`);
-      return response.data;
-    } catch (error: any) {
-      console.error(`Delete organization error for ID ${orgId}:`, error.message);
-      throw error;
-    }
-  }
-
-  async getOrganizationMembers(orgId: string): Promise<{ members: any[] }> {
-    try {
-      const response = await this.client.get(`/organizations/${orgId}/members`);
-      return response.data;
-    } catch (error: any) {
-      console.error(`Get organization members error for ID ${orgId}:`, error.message);
-      throw error;
-    }
-  }
-
-  async updateOrganizationMembers(orgId: string, updates: any): Promise<{ success: boolean }> {
-    try {
-      const response = await this.client.patch(`/organizations/${orgId}/members`, updates);
-      return response.data;
-    } catch (error: any) {
-      console.error(`Update organization members error for ID ${orgId}:`, error.message);
-      throw error;
-    }
-  }
-
-  async getOrganizationBilling(orgId: string): Promise<{ billing: any }> {
-    try {
-      const response = await this.client.get(`/organizations/${orgId}/billing`);
-      return response.data;
-    } catch (error: any) {
-      console.error(`Get organization billing error for ID ${orgId}:`, error.message);
-      throw error;
-    }
-  }
 } 

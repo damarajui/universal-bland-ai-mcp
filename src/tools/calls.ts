@@ -21,23 +21,23 @@ export function createUniversalCallTools(blandClient: BlandAIClient) {
         // Smart Scheduling
         schedule_for: z.string().optional(),
         timezone: z.string().optional(),
-        business_hours_only: z.boolean().optional().default(false),
+        business_hours_only: z.coerce.boolean().optional().default(false),
         
         // Advanced Audio & Conversation
         background_sound: z.enum(['office', 'cafe', 'restaurant', 'none', 'phone_static']).optional(),
         conversation_style: z.enum(['quick', 'balanced', 'patient', 'very_patient']).optional().default('balanced'),
-        interruptions_allowed: z.boolean().optional().default(true),
+        interruptions_allowed: z.coerce.boolean().optional().default(true),
         model_type: z.enum(['base', 'turbo']).optional().default('base'),
-        creativity_level: z.number().min(0).max(1).optional().default(0.7),
+        creativity_level: z.coerce.number().min(0).max(1).optional().default(0.7),
         
         // Call Behavior  
-        wait_for_greeting: z.boolean().optional().default(false),
+        wait_for_greeting: z.coerce.boolean().optional().default(false),
         first_sentence: z.string().optional(),
-        max_duration_minutes: z.number().optional().default(30),
+        max_duration_minutes: z.coerce.number().optional().default(30),
         
         // Recording & Analysis
-        record_call: z.boolean().optional().default(false),
-        analyze_emotions: z.boolean().optional().default(false),
+        record_call: z.coerce.boolean().optional().default(false),
+        analyze_emotions: z.coerce.boolean().optional().default(false),
         extract_data: z.object({
           fields: z.array(z.string()).optional(),
           schema: z.any().optional()
@@ -50,7 +50,7 @@ export function createUniversalCallTools(blandClient: BlandAIClient) {
         // Voicemail Handling
         voicemail_action: z.enum(['hangup', 'leave_message', 'ignore']).optional().default('hangup'),
         voicemail_message: z.string().optional(),
-        retry_on_voicemail: z.boolean().optional().default(false),
+        retry_on_voicemail: z.coerce.boolean().optional().default(false),
         
         // Integration & Webhooks
         webhook_url: z.string().optional(),
@@ -62,7 +62,7 @@ export function createUniversalCallTools(blandClient: BlandAIClient) {
         })).optional(),
         
         // Call Quality & Enhancement
-        noise_cancellation: z.boolean().optional().default(false),
+        noise_cancellation: z.coerce.boolean().optional().default(false),
         pronunciation_guide: z.array(z.object({
           word: z.string(),
           pronunciation: z.string()
@@ -71,9 +71,9 @@ export function createUniversalCallTools(blandClient: BlandAIClient) {
         
         // Enterprise Features
         from_number: z.string().optional(),
-        local_dialing: z.boolean().optional().default(false),
+        local_dialing: z.coerce.boolean().optional().default(false),
         sms_on_voicemail: z.object({
-          enabled: z.boolean().default(false),
+          enabled: z.coerce.boolean().default(false),
           message: z.string().optional()
         }).optional(),
         
@@ -354,12 +354,12 @@ export function createUniversalCallTools(blandClient: BlandAIClient) {
         
         // Campaign Configuration
         voice: z.string().optional().default('maya'),
-        concurrency: z.number().min(1).max(100).optional().default(10),
+        concurrency: z.coerce.number().min(1).max(100).optional().default(10),
         call_scheduling: z.object({
           start_time: z.string().optional(),
           end_time: z.string().optional(),
           timezone: z.string().optional(),
-          business_hours_only: z.boolean().optional().default(true)
+          business_hours_only: z.coerce.boolean().optional().default(true)
         }).optional(),
         
         // Personalization
@@ -369,23 +369,23 @@ export function createUniversalCallTools(blandClient: BlandAIClient) {
         })).optional(),
         
         // Call Behavior
-        max_duration_minutes: z.number().optional().default(10),
+        max_duration_minutes: z.coerce.number().optional().default(10),
         voicemail_strategy: z.enum(['skip', 'leave_message', 'callback']).optional().default('leave_message'),
         retry_policy: z.object({
-          enabled: z.boolean().default(false),
-          max_attempts: z.number().min(1).max(5).optional().default(2),
-          wait_minutes: z.number().min(60).max(1440).optional().default(240)
+          enabled: z.coerce.boolean().default(false),
+          max_attempts: z.coerce.number().min(1).max(5).optional().default(2),
+          wait_minutes: z.coerce.number().min(60).max(1440).optional().default(240)
         }).optional(),
         
         // Analytics & Tracking
-        track_conversions: z.boolean().optional().default(true),
+        track_conversions: z.coerce.boolean().optional().default(true),
         disposition_tags: z.array(z.string()).optional(),
         webhook_url: z.string().optional(),
         
         // Advanced Features
-        local_presence: z.boolean().optional().default(false),
-        record_calls: z.boolean().optional().default(false),
-        real_time_coaching: z.boolean().optional().default(false)
+        local_presence: z.coerce.boolean().optional().default(false),
+        record_calls: z.coerce.boolean().optional().default(false),
+        real_time_coaching: z.coerce.boolean().optional().default(false)
       }),
       handler: async (args: any) => {
         try {

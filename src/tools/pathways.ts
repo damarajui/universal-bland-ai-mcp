@@ -156,7 +156,7 @@ export function createPathwayTools(blandClient: BlandAIClient) {
           headers: z.record(z.string()).optional(),
           query: z.record(z.any()).optional(),
           body: z.any().optional(),
-          cache: z.boolean().default(true),
+          cache: z.coerce.boolean().default(true),
           response_mapping: z.array(z.object({
             variable_name: z.string(),
             json_path: z.string(), // e.g., "$.calls[0].c_id"
@@ -196,24 +196,24 @@ export function createPathwayTools(blandClient: BlandAIClient) {
           kb_id: z.string().optional(),
           content: z.string().optional(),
           search_mode: z.enum(['semantic', 'keyword', 'hybrid']).default('semantic'),
-          confidence_threshold: z.number().min(0).max(1).default(0.7)
+          confidence_threshold: z.coerce.number().min(0).max(1).default(0.7)
         })).optional(),
         
         // Advanced Voice Settings
         voice_settings: z.object({
-          voice_id: z.union([z.string(), z.number()]).optional(),
-          speed: z.number().min(0.5).max(2.0).optional(),
-          interruption_threshold: z.number().min(0).max(100).optional(),
-          reduce_latency: z.boolean().default(true)
+                  voice_id: z.union([z.string(), z.coerce.number()]).optional(),
+        speed: z.coerce.number().min(0.5).max(2.0).optional(),
+        interruption_threshold: z.coerce.number().min(0).max(100).optional(),
+        reduce_latency: z.coerce.boolean().default(true)
         }).optional(),
         
         // Call Configuration
         call_settings: z.object({
-          max_duration: z.number().min(1).max(60).optional(),
-          record: z.boolean().default(true),
-          wait_for_greeting: z.boolean().default(true),
-          language: z.string().default('ENG'),
-          answered_by_enabled: z.boolean().default(true)
+                  max_duration: z.coerce.number().min(1).max(60).optional(),
+        record: z.coerce.boolean().default(true),
+        wait_for_greeting: z.coerce.boolean().default(true),
+        language: z.string().default('ENG'),
+        answered_by_enabled: z.coerce.boolean().default(true)
         }).optional(),
         
         // Transfer Configuration
@@ -302,7 +302,7 @@ export function createPathwayTools(blandClient: BlandAIClient) {
         transfer_number: z.string().optional(),
         webhook_url: z.string().optional(),
         knowledge_base_content: z.string().optional(),
-        use_advanced_features: z.boolean().default(true)
+        use_advanced_features: z.coerce.boolean().default(true)
       }),
       handler: async (args: any) => {
         try {
@@ -355,10 +355,10 @@ export function createPathwayTools(blandClient: BlandAIClient) {
         product_or_service: z.string(),
         price_range: z.string().optional(),
         qualification_criteria: z.string().default('budget, authority, need, timeline'),
-        objection_handling: z.boolean().default(true),
+        objection_handling: z.coerce.boolean().default(true),
         transfer_number: z.string().optional(),
         webhook_url: z.string().optional(),
-        lead_scoring: z.boolean().default(true)
+        lead_scoring: z.coerce.boolean().default(true)
       }),
       handler: async (args: any) => {
         try {
@@ -411,7 +411,7 @@ export function createPathwayTools(blandClient: BlandAIClient) {
         knowledge_base_content: z.string().optional(),
         escalation_number: z.string().optional(),
         resolution_webhook: z.string().optional(),
-        satisfaction_tracking: z.boolean().default(true)
+        satisfaction_tracking: z.coerce.boolean().default(true)
       }),
       handler: async (args: any) => {
         try {
@@ -464,8 +464,8 @@ export function createPathwayTools(blandClient: BlandAIClient) {
         business_hours: z.string().default('9 AM to 5 PM, Monday to Friday'),
         booking_webhook: z.string().optional(),
         confirmation_method: z.enum(['email', 'sms', 'both']).default('both'),
-        automated_reminders: z.boolean().default(true),
-        rescheduling_allowed: z.boolean().default(true)
+        automated_reminders: z.coerce.boolean().default(true),
+        rescheduling_allowed: z.coerce.boolean().default(true)
       }),
       handler: async (args: any) => {
         try {
@@ -522,10 +522,10 @@ export function createPathwayTools(blandClient: BlandAIClient) {
           endpoint: z.string().optional()
         })).optional(),
         advanced_features: z.object({
-          variable_extraction: z.boolean().default(true),
-          conditional_logic: z.boolean().default(true),
-          global_fallbacks: z.boolean().default(true),
-          fine_tuning_examples: z.boolean().default(false)
+                  variable_extraction: z.coerce.boolean().default(true),
+        conditional_logic: z.coerce.boolean().default(true),
+        global_fallbacks: z.coerce.boolean().default(true),
+        fine_tuning_examples: z.coerce.boolean().default(false)
         }).optional()
       }),
       handler: async (args: any) => {

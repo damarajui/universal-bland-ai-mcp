@@ -3,7 +3,6 @@ import { z } from 'zod';
 // Configuration schema with validation
 const configSchema = z.object({
   BLAND_API_KEY: z.string().min(1, 'Bland AI API key is required'),
-  BLAND_ORG_ID: z.string().optional(),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   MCP_SERVER_PORT: z.string().transform(Number).default('3000'),
@@ -22,7 +21,6 @@ class ConfigManager {
     // Load environment variables
     const env = {
       BLAND_API_KEY: process.env.BLAND_API_KEY || '',
-      BLAND_ORG_ID: process.env.BLAND_ORG_ID,
       LOG_LEVEL: process.env.LOG_LEVEL || 'info',
       NODE_ENV: process.env.NODE_ENV || 'development',
       MCP_SERVER_PORT: process.env.MCP_SERVER_PORT || '3000',

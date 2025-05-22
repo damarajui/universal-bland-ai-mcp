@@ -156,15 +156,7 @@ export interface BlandPhoneNumber {
   monthly_cost?: number;
 }
 
-// Organization Types
-export interface BlandOrganization {
-  org_id: string;
-  name: string;
-  members: any[];
-  billing_info?: any;
-  service_version?: string;
-  created_at: string;
-}
+
 
 // Prompt Types
 export interface BlandPrompt {

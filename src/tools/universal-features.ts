@@ -25,8 +25,8 @@ export function createUniversalFeatureTools(blandClient: BlandAIClient) {
         priority: z.enum(['high', 'medium', 'low']).optional().default('medium'),
         
         // Smart Processing
-        auto_chunk: z.boolean().optional().default(true),
-        extract_key_points: z.boolean().optional().default(true),
+        auto_chunk: z.coerce.boolean().optional().default(true),
+        extract_key_points: z.coerce.boolean().optional().default(true),
         language: z.string().optional().default('en')
       }),
       handler: async (args: any) => {
@@ -184,7 +184,7 @@ export function createUniversalFeatureTools(blandClient: BlandAIClient) {
         sample_text: z.string().optional(),
         
         // Publishing
-        make_public: z.boolean().optional().default(false),
+        make_public: z.coerce.boolean().optional().default(false),
         license_type: z.enum(['personal', 'commercial', 'enterprise']).optional().default('personal')
       }),
       handler: async (args: any) => {
@@ -329,9 +329,9 @@ export function createUniversalFeatureTools(blandClient: BlandAIClient) {
         
         // Configuration
         sms_config: z.object({
-          auto_reply: z.boolean().optional().default(false),
+          auto_reply: z.coerce.boolean().optional().default(false),
           auto_reply_message: z.string().optional(),
-          business_hours_only: z.boolean().optional().default(false),
+          business_hours_only: z.coerce.boolean().optional().default(false),
           keyword_responses: z.array(z.object({
             keyword: z.string(),
             response: z.string()
@@ -342,8 +342,8 @@ export function createUniversalFeatureTools(blandClient: BlandAIClient) {
         
         // Advanced Features
         schedule_send: z.string().optional(),
-        track_delivery: z.boolean().optional().default(true),
-        include_unsubscribe: z.boolean().optional().default(true)
+        track_delivery: z.coerce.boolean().optional().default(true),
+        include_unsubscribe: z.coerce.boolean().optional().default(true)
       }),
       handler: async (args: any) => {
         try {

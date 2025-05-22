@@ -15,21 +15,20 @@ dotenv.config();
 
 // Validate required environment variables
 const BLAND_API_KEY = process.env.BLAND_AI_API_KEY;
-const BLAND_ORG_ID = process.env.BLAND_AI_ORG_ID || undefined; // Make properly optional
 
 if (!BLAND_API_KEY) {
   console.error('BLAND_AI_API_KEY environment variable is required');
   process.exit(1);
 }
 
-// Initialize Bland AI client - organization ID is optional
-const blandClient = new BlandAIClient(BLAND_API_KEY, BLAND_ORG_ID);
+// Initialize Bland AI client
+const blandClient = new BlandAIClient(BLAND_API_KEY);
 
 // Create MCP server
 const server = new Server(
   {
     name: process.env.MCP_SERVER_NAME || 'bland-ai-mcp',
-    version: process.env.MCP_SERVER_VERSION || '1.0.0',
+    version: process.env.MCP_SERVER_VERSION || '1.1.1',
   },
   {
     capabilities: {
@@ -130,7 +129,7 @@ async function main() {
   
   console.error('Bland AI MCP Server running on stdio');
   console.error(`Server name: ${process.env.MCP_SERVER_NAME || 'bland-ai-mcp'}`);
-  console.error(`Server version: ${process.env.MCP_SERVER_VERSION || '1.0.0'}`);
+  console.error(`Server version: ${process.env.MCP_SERVER_VERSION || '1.1.1'}`);
 }
 
 // Handle process termination

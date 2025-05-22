@@ -26,7 +26,19 @@ You'll need:
 - A Bland AI API key (grab one from app.bland.ai)
 - Claude Desktop, Cursor, or any MCP-compatible platform
 
-### Installation
+### Easy Installation (Recommended)
+
+Just install the package globally:
+
+```bash
+npm install -g universal-bland-ai-mcp-server
+```
+
+That's it! No need to clone, build, or manage the codebase.
+
+### Manual Installation (For Development)
+
+If you want to modify the code:
 
 ```bash
 git clone https://github.com/inaandamaraju/universal-bland-ai-mcp
@@ -59,7 +71,22 @@ You should see all 20 tools load up successfully.
 
 ### For Claude Desktop
 
-Add this to your MCP configuration:
+If you installed globally via NPM:
+
+```json
+{
+  "mcpServers": {
+    "bland-ai": {
+      "command": "universal-bland-mcp",
+      "env": {
+        "BLAND_AI_API_KEY": "your_api_key"
+      }
+    }
+  }
+}
+```
+
+If you cloned the repository:
 
 ```json
 {
@@ -68,7 +95,7 @@ Add this to your MCP configuration:
       "command": "node",
       "args": ["/path/to/universal-bland-ai-mcp/build/index.js"],
       "env": {
-        "BLAND_API_KEY": "your_api_key"
+        "BLAND_AI_API_KEY": "your_api_key"
       }
     }
   }
@@ -77,14 +104,27 @@ Add this to your MCP configuration:
 
 ### For Cursor
 
-Drop this into your MCP settings:
+If you installed globally via NPM:
 
 ```json
 {
   "servers": {
     "bland-ai": {
-      "command": "node build/index.js", 
-      "env": {"BLAND_API_KEY": "your_key"}
+      "command": "universal-bland-mcp",
+      "env": {"BLAND_AI_API_KEY": "your_key"}
+    }
+  }
+}
+```
+
+If you cloned the repository:
+
+```json
+{
+  "servers": {
+    "bland-ai": {
+      "command": "node build/index.js",
+      "env": {"BLAND_AI_API_KEY": "your_key"}
     }
   }
 }

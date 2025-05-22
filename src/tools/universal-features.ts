@@ -35,11 +35,11 @@ export function createUniversalFeatureTools(blandClient: BlandAIClient) {
             case 'create':
               if (!args.name) throw new Error('name required for create action');
               
-              const kbResult = await blandClient.createKnowledgeBase(args.name, args.description);
+              const kbResult = await blandClient.createKnowledgeBase(args.name, args.description, args.content);
               
               return {
                 success: true,
-                kb_id: kbResult.kb_id,
+                kb_id: kbResult.vector_id,
                 name: args.name,
                 message: `Knowledge base "${args.name}" created successfully`,
                 next_steps: 'Upload content using the upload_text or upload_media actions'
@@ -100,7 +100,7 @@ export function createUniversalFeatureTools(blandClient: BlandAIClient) {
                 success: true,
                 total_knowledge_bases: knowledgeBases.length,
                 knowledge_bases: knowledgeBases.map(kb => ({
-                  kb_id: kb.kb_id,
+                  kb_id: kb.vector_id,
                   name: kb.name,
                   description: kb.description,
                   documents_count: kb.documents_count,
@@ -557,25 +557,39 @@ export function createUniversalFeatureTools(blandClient: BlandAIClient) {
               };
 
             case 'list':
-              const numbers = await blandClient.listNumbers();
-              
-              const categorized = {
-                local: numbers.filter(n => n.type === 'local'),
-                toll_free: numbers.filter(n => n.type === 'toll_free'),
-                mobile: numbers.filter(n => n.type === 'mobile')
-              };
-              
-              return {
-                success: true,
-                total_numbers: numbers.length,
-                breakdown: {
-                  local: categorized.local.length,
-                  toll_free: categorized.toll_free.length,
-                  mobile: categorized.mobile.length
-                },
-                numbers: numbers,
-                monthly_cost_total: numbers.reduce((sum, n) => sum + (n.monthly_cost || 0), 0)
-              };
+              try {
+                const numbers = await blandClient.listNumbers();
+                
+                const categorized = {
+                  local: numbers.filter(n => n.type === 'local'),
+                  toll_free: numbers.filter(n => n.type === 'toll_free'),
+                  mobile: numbers.filter(n => n.type === 'mobile')
+                };
+                
+                return {
+                  success: true,
+                  total_numbers: numbers.length,
+                  breakdown: {
+                    local: categorized.local.length,
+                    toll_free: categorized.toll_free.length,
+                    mobile: categorized.mobile.length
+                  },
+                  numbers: numbers,
+                  monthly_cost_total: numbers.reduce((sum, n) => sum + (n.monthly_cost || 0), 0)
+                };
+              } catch (error: any) {
+                // If the endpoint doesn't exist or access is restricted, return a helpful message
+                if (error.response?.status === 404) {
+                  return {
+                    success: false,
+                    error: "Phone numbers endpoint not available - feature may not be enabled for this account",
+                    message: "Failed to list phone number",
+                    note: "Phone number management may require enterprise features or specific account permissions"
+                  };
+                } else {
+                  throw error;
+                }
+              }
 
             case 'get':
               if (!args.number_id) throw new Error('number_id required for get action');
@@ -643,29 +657,33 @@ export function createUniversalFeatureTools(blandClient: BlandAIClient) {
         automation_name: z.string(),
         description: z.string(),
         
-        // Trigger Configuration
+        // Trigger Configuration (with defaults)
         trigger: z.object({
           type: z.enum(['immediate', 'scheduled', 'webhook', 'condition_based']),
           schedule: z.string().optional(),
           webhook_url: z.string().optional(),
           conditions: z.array(z.string()).optional()
-        }),
+        }).default({ type: 'immediate' }),
         
-        // Workflow Steps
+        // Workflow Steps (with defaults)
         workflow_steps: z.array(z.object({
           step_name: z.string(),
           action_type: z.enum(['call', 'sms', 'wait', 'condition_check', 'data_update', 'webhook_call']),
-          parameters: z.any(),
+          parameters: z.any().default({}),
           success_action: z.string().optional(),
           failure_action: z.string().optional()
-        })),
+        })).default([{
+          step_name: 'Default Step',
+          action_type: 'call',
+          parameters: { instructions: 'Default automation step' }
+        }]),
         
-        // Target Management
+        // Target Management (with defaults)
         targets: z.object({
           phone_numbers: z.array(z.string()).optional(),
           segments: z.array(z.string()).optional(),
           dynamic_list_url: z.string().optional()
-        }),
+        }).default({ phone_numbers: [] }),
         
         // Intelligence Features
         ai_features: z.object({
@@ -674,7 +692,13 @@ export function createUniversalFeatureTools(blandClient: BlandAIClient) {
           adaptive_timing: z.boolean().default(true),
           smart_retries: z.boolean().default(true),
           outcome_learning: z.boolean().default(true)
-        }).optional(),
+        }).optional().default({
+          personalization: true,
+          sentiment_tracking: true,
+          adaptive_timing: true,
+          smart_retries: true,
+          outcome_learning: true
+        }),
         
         // Analytics & Reporting
         analytics: z.object({
@@ -682,7 +706,10 @@ export function createUniversalFeatureTools(blandClient: BlandAIClient) {
           custom_metrics: z.array(z.string()).optional(),
           reporting_webhook: z.string().optional(),
           dashboard_updates: z.boolean().default(true)
-        }).optional()
+        }).optional().default({
+          track_conversions: true,
+          dashboard_updates: true
+        })
       }),
       handler: async (args: any) => {
         try {

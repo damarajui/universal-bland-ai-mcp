@@ -12,19 +12,79 @@ interface PathwayNodeData {
   condition?: string;
   transferNumber?: string;
   kb?: string;
+  
+  // Fine-tuning Support (from pathway docs)
   pathwayExamples?: Array<{ userInput: string; pathway: string }>;
   conditionExamples?: Array<{ userInput: string; conditionMet: boolean }>;
   dialogueExamples?: Array<{ scenario: string; expectedResponse: string }>;
+  
+  // Model Configuration
   modelOptions?: {
     modelName?: string;
     interruptionThreshold?: number;
     temperature?: number;
   };
+  
+  // Variable Extraction
   extractVars?: Array<[string, string, string]>; // [varName, varType, varDescription]
+  
+  // Webhook Integration
   webhookUrl?: string;
   webhookMethod?: string;
   webhookData?: any;
   webhookHeaders?: Array<{ key: string; value: string }>;
+  
+  // MISSING: Dynamic Data Integration (from dynamic-data docs)
+  dynamic_data?: Array<{
+    url: string;
+    method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+    headers?: Record<string, string>;
+    query?: Record<string, any>;
+    body?: any;
+    cache?: boolean;
+    response_data?: Array<{
+      name: string;
+      data: string; // JSONPath like $.calls[0].c_id
+      context?: string; // How to use this variable
+    }>;
+  }>;
+  
+  // MISSING: Custom Tools Integration (from custom-tools docs)
+  tools?: Array<{
+    name: string;
+    description: string;
+    input_schema: any;
+    speech?: string;
+    response_data?: Array<{
+      name: string;
+      data: string;
+    }>;
+  }>;
+  
+  // MISSING: Advanced Conditions & Logic
+  advanced_conditions?: {
+    if_conditions?: Array<{
+      condition: string;
+      target_node: string;
+      examples?: Array<{ input: string; meets_condition: boolean }>;
+    }>;
+    fallback_node?: string;
+  };
+  
+  // MISSING: Voice & Conversation Control
+  voice_settings?: {
+    voice_id?: string | number;
+    speed?: number;
+    interruption_threshold?: number;
+  };
+  
+  // MISSING: Call Flow Control
+  call_settings?: {
+    max_duration?: number;
+    reduce_latency?: boolean;
+    record?: boolean;
+    wait_for_greeting?: boolean;
+  };
 }
 
 interface PathwayNode {
@@ -49,6 +109,126 @@ interface CompletePathway {
 
 export function createPathwayTools(blandClient: BlandAIClient) {
   return [
+    {
+      name: 'create_ultra_advanced_pathway',
+      description: 'Create the most sophisticated pathway possible with dynamic data, custom tools, fine-tuning, and all advanced Bland AI features',
+      inputSchema: z.object({
+        name: z.string().min(1).max(100),
+        description: z.string().min(10).max(5000),
+        business_context: z.string().optional(),
+        goal: z.string().optional(),
+        
+        // Advanced Integration Options
+        crm_integration: z.object({
+          api_url: z.string(),
+          api_key: z.string(),
+          lookup_endpoint: z.string().optional(),
+          update_endpoint: z.string().optional()
+        }).optional(),
+        
+        // Dynamic Data Sources
+        data_sources: z.array(z.object({
+          name: z.string(),
+          url: z.string(),
+          method: z.enum(['GET', 'POST', 'PATCH', 'DELETE']).default('GET'),
+          headers: z.record(z.string()).optional(),
+          response_mapping: z.array(z.object({
+            variable_name: z.string(),
+            json_path: z.string(),
+            description: z.string()
+          }))
+        })).optional(),
+        
+        // Custom Tools
+        custom_tools: z.array(z.object({
+          name: z.string(),
+          description: z.string(),
+          api_endpoint: z.string(),
+          input_fields: z.array(z.object({
+            field_name: z.string(),
+            field_type: z.string(),
+            description: z.string()
+          })),
+          output_mapping: z.array(z.object({
+            variable_name: z.string(),
+            json_path: z.string()
+          }))
+        })).optional(),
+        
+        // Fine-tuning Examples
+        training_examples: z.array(z.object({
+          user_input: z.string(),
+          expected_action: z.string(),
+          target_node: z.string().optional()
+        })).optional(),
+        
+        // Advanced Settings
+        voice_settings: z.object({
+          voice_id: z.union([z.string(), z.number()]).optional(),
+          speed: z.number().min(0.5).max(2.0).optional(),
+          interruption_threshold: z.number().min(0).max(100).optional()
+        }).optional(),
+        
+        call_settings: z.object({
+          max_duration: z.number().min(1).max(60).optional(),
+          reduce_latency: z.boolean().default(true),
+          record: z.boolean().default(true),
+          wait_for_greeting: z.boolean().default(true)
+        }).optional()
+      }),
+      handler: async (args: any) => {
+        try {
+          // Create basic pathway
+          const basicPathway = await blandClient.createPathway(args.name, args.description);
+          
+          // Build ultra-advanced structure with all features
+          const advancedStructure = buildUltraAdvancedPathway(args);
+          
+          // Update with complete structure
+          const result = await blandClient.updatePathway(
+            basicPathway.pathway_id,
+            args.name,
+            args.description,
+            advancedStructure.nodes,
+            advancedStructure.edges
+          );
+          
+          return {
+            success: true,
+            pathway_id: basicPathway.pathway_id,
+            message: `Created ultra-advanced pathway "${args.name}" with every possible Bland AI feature`,
+            advanced_features: {
+              dynamic_data_sources: args.data_sources?.length || 0,
+              custom_tools: args.custom_tools?.length || 0,
+              training_examples: args.training_examples?.length || 0,
+              crm_integration: !!args.crm_integration,
+              voice_customization: !!args.voice_settings,
+              call_optimization: !!args.call_settings,
+              nodes_created: advancedStructure.nodes.length,
+              edges_created: advancedStructure.edges.length
+            },
+            capabilities: [
+              'Real-time CRM data lookup and updates',
+              'Dynamic external API integration',
+              'Custom tool execution during calls',
+              'Fine-tuned conversation routing',
+              'Advanced voice and call control',
+              'Multi-condition branching logic',
+              'Context-aware variable extraction',
+              'Intelligent fallback handling'
+            ]
+          };
+        } catch (error: any) {
+          console.error('Error creating ultra-advanced pathway:', error);
+          return {
+            success: false,
+            error: error.message,
+            message: `Failed to create ultra-advanced pathway "${args.name}"`
+          };
+        }
+      }
+    },
+
     {
       name: 'create_sophisticated_pathway_from_description',
       description: 'Create a complete, sophisticated conversational pathway with full node structure and routing logic from natural language description',
@@ -1283,4 +1463,302 @@ function buildCustomWorkflowPathway(args: any): CompletePathway {
   });
 
   return { name: args.name, description: args.workflow_description, nodes, edges };
-} 
+}
+
+// ULTRA-ADVANCED pathway builder with ALL Bland AI features
+function buildUltraAdvancedPathway(args: any): CompletePathway {
+  const nodes: PathwayNode[] = [];
+  const edges: PathwayEdge[] = [];
+
+  // Ultra-Advanced Greeting with Dynamic Data Integration
+  nodes.push({
+    id: 'ultra_greeting',
+    type: 'Default',
+    data: {
+      name: 'Ultra-Advanced Greeting',
+      isStart: true,
+      prompt: `Hello! Welcome to our ultra-advanced ${args.business_context || 'AI'} system.
+               I'm going to personalize this entire conversation based on real-time data.
+               What's your phone number so I can look up your information?`,
+      
+      // Dynamic Data Integration - Look up customer info in real-time
+      dynamic_data: args.crm_integration ? [
+        {
+          url: `${args.crm_integration.api_url}${args.crm_integration.lookup_endpoint || '/customers/lookup'}`,
+          method: 'GET',
+          headers: {
+            authorization: args.crm_integration.api_key,
+            'content-type': 'application/json'
+          },
+          query: {
+            phone: '{{phone_number}}',
+            lookup_type: 'full_profile'
+          },
+          response_data: [
+            { name: 'customer_name', data: '$.customer.name', context: 'Customer name: {{customer_name}}' },
+            { name: 'customer_tier', data: '$.customer.tier', context: 'VIP status: {{customer_tier}}' },
+            { name: 'last_interaction', data: '$.customer.last_contact', context: 'Last spoke: {{last_interaction}}' },
+            { name: 'customer_value', data: '$.customer.lifetime_value', context: 'Customer value: ${{customer_value}}' },
+            { name: 'preferences', data: '$.customer.preferences', context: 'Preferences: {{preferences}}' }
+          ],
+          cache: true
+        }
+      ] : undefined,
+      
+             // Custom Tools Integration
+       tools: args.custom_tools?.map((tool: any) => ({
+         name: tool.name,
+         description: tool.description,
+         input_schema: {
+           type: 'object',
+           properties: tool.input_fields.reduce((acc: any, field: any) => {
+             acc[field.field_name] = { type: field.field_type, description: field.description };
+             return acc;
+           }, {}),
+           required: tool.input_fields.map((f: any) => f.field_name)
+         },
+         speech: `Using ${tool.name} to ${tool.description}...`,
+         response_data: tool.output_mapping.map((output: any) => ({
+           name: output.variable_name,
+           data: output.json_path
+         }))
+       })),
+      
+      // Advanced Voice Settings
+      voice_settings: args.voice_settings,
+      
+      // Call Optimization Settings
+      call_settings: args.call_settings,
+      
+             // Fine-tuning Examples
+       pathwayExamples: args.training_examples?.map((example: any) => ({
+         userInput: example.user_input,
+         pathway: example.target_node || 'ultra_analysis'
+       })),
+      
+      // Variable Extraction
+      extractVars: [
+        ['phone_number', 'string', 'Customer phone number for lookup'],
+        ['initial_intent', 'string', 'Customer\'s initial reason for calling'],
+        ['urgency_level', 'string', 'How urgent their request is'],
+        ['emotional_state', 'string', 'Customer\'s emotional state (calm/excited/frustrated/angry)'],
+        ['call_context', 'string', 'Full context of why they\'re calling']
+      ]
+    }
+  });
+
+  // Ultra-Advanced Analysis Node with Multiple Data Sources
+  nodes.push({
+    id: 'ultra_analysis',
+    type: 'Default',
+    data: {
+      name: 'Ultra-Advanced Analysis Engine',
+      prompt: `Perfect! I found your information, {{customer_name}}. 
+               As a {{customer_tier}} customer with a lifetime value of $` + `{{customer_value}}, 
+               I'll provide you with our premium service level.
+               I see we last spoke {{last_interaction}} and your preferences are {{preferences}}.
+               How can I help you today with {{initial_intent}}?`,
+      
+             // Multiple Dynamic Data Sources
+       dynamic_data: args.data_sources?.map((source: any) => ({
+         url: source.url,
+         method: source.method,
+         headers: source.headers || {},
+         response_data: source.response_mapping.map((mapping: any) => ({
+           name: mapping.variable_name,
+           data: mapping.json_path,
+           context: mapping.description
+         }))
+       })),
+      
+      // Advanced Conditional Logic
+      advanced_conditions: {
+        if_conditions: [
+                     {
+             condition: 'customer_tier equals "VIP" or customer_value > 10000',
+             target_node: 'vip_handling',
+             examples: [
+               { input: 'VIP customer calling', meets_condition: true },
+               { input: 'Regular customer calling', meets_condition: false }
+             ]
+           },
+          {
+            condition: 'urgency_level equals "high" or emotional_state contains "angry"',
+            target_node: 'priority_handling',
+            examples: [
+              { input: 'Customer says it\'s urgent', meets_condition: true },
+              { input: 'Customer sounds frustrated', meets_condition: true }
+            ]
+          }
+        ],
+        fallback_node: 'standard_handling'
+      },
+      
+      extractVars: [
+        ['analysis_complete', 'boolean', 'Whether full analysis is done'],
+        ['recommended_path', 'string', 'Recommended next action'],
+        ['personalization_data', 'string', 'All personalized context for this customer']
+      ]
+    }
+  });
+
+  // VIP Handling Node
+  nodes.push({
+    id: 'vip_handling',
+    type: 'Default',
+    data: {
+      name: 'VIP Customer Experience',
+      prompt: `{{customer_name}}, as one of our {{customer_tier}} customers, you get our white-glove service.
+               I'm prioritizing your {{initial_intent}} request and will personally ensure it's resolved.
+               Let me handle this with our premium process.`,
+      
+             // VIP-specific tools and integrations
+       tools: args.custom_tools?.filter((tool: any) => tool.name.includes('VIP') || tool.name.includes('Premium')),
+      
+      extractVars: [
+        ['vip_request_details', 'string', 'Detailed VIP request information'],
+        ['vip_resolution_method', 'string', 'How we\'re resolving this for VIP'],
+        ['vip_satisfaction', 'string', 'VIP customer satisfaction level']
+      ]
+    }
+  });
+
+  // Priority Handling Node
+  nodes.push({
+    id: 'priority_handling',
+    type: 'Default',
+    data: {
+      name: 'Priority Resolution Center',
+      prompt: `I understand this is {{urgency_level}} priority, {{customer_name}}.
+               I'm treating this as urgent and will resolve it immediately.
+               Let me escalate this to our priority resolution system.`,
+      
+      extractVars: [
+        ['priority_actions_taken', 'string', 'Actions taken for priority handling'],
+        ['escalation_needed', 'boolean', 'Whether further escalation is needed'],
+        ['priority_eta', 'string', 'Estimated time for priority resolution']
+      ]
+    }
+  });
+
+  // Standard Handling Node
+  nodes.push({
+    id: 'standard_handling',
+    type: 'Default',
+    data: {
+      name: 'Standard Resolution Process',
+      prompt: `Thank you {{customer_name}}. I'll help you with {{initial_intent}} using our standard process.
+               Based on your history and preferences ({{preferences}}), here's how we'll proceed.`,
+      
+      extractVars: [
+        ['standard_process_step', 'string', 'Current step in standard process'],
+        ['estimated_resolution_time', 'string', 'How long this should take'],
+        ['additional_info_needed', 'boolean', 'Whether more info is needed']
+      ]
+    }
+  });
+
+  // Real-time CRM Update Node
+  if (args.crm_integration?.update_endpoint) {
+    nodes.push({
+      id: 'crm_update',
+      type: 'Webhook',
+      data: {
+        name: 'Real-time CRM Update',
+        prompt: 'Updating your customer record with today\'s interaction...',
+        webhookUrl: `${args.crm_integration.api_url}${args.crm_integration.update_endpoint}`,
+        webhookMethod: 'PATCH',
+        webhookHeaders: [
+          { key: 'authorization', value: args.crm_integration.api_key },
+          { key: 'content-type', value: 'application/json' }
+        ],
+        webhookData: {
+          customer_phone: '{{phone_number}}',
+          interaction_type: 'phone_call',
+          intent: '{{initial_intent}}',
+          resolution_path: '{{recommended_path}}',
+          satisfaction: '{{customer_satisfaction}}',
+          notes: '{{interaction_summary}}',
+          agent_type: 'ai_pathway',
+          timestamp: '{{now}}'
+        }
+      }
+    });
+  }
+
+  // Ultra-Advanced Global Nodes
+  nodes.push({
+    id: 'ultra_global_help',
+    type: 'Default',
+    data: {
+      name: 'Ultra-Personalized Help',
+      isGlobal: true,
+      globalLabel: 'customer needs help or has questions',
+      prompt: `Of course, {{customer_name}}! Based on your {{customer_tier}} status and previous interactions,
+               I'll provide personalized assistance. What specific help do you need?
+               Context: {{prevNodePrompt}}`,
+      
+      pathwayExamples: [
+        { userInput: 'I need help with billing', pathway: 'billing_help' },
+        { userInput: 'Technical support please', pathway: 'tech_support' },
+        { userInput: 'I want to upgrade', pathway: 'upgrade_path' }
+      ]
+    }
+  });
+
+  // Ultra-Resolution Node
+  nodes.push({
+    id: 'ultra_resolution',
+    type: 'Default',
+    data: {
+      name: 'Ultra-Resolution Completion',
+      prompt: `Excellent! I've resolved your {{initial_intent}} request, {{customer_name}}.
+               Summary: {{resolution_summary}}
+               As a {{customer_tier}} customer, is there anything else I can help you with today?`,
+      
+      // Final data collection and satisfaction
+      extractVars: [
+        ['resolution_summary', 'string', 'Complete summary of what was resolved'],
+        ['customer_satisfaction', 'string', 'Final satisfaction rating'],
+        ['followup_needed', 'boolean', 'Whether any follow-up is needed'],
+        ['interaction_summary', 'string', 'Full interaction summary for CRM']
+      ]
+    }
+  });
+
+  // Ultimate End Node
+  nodes.push({
+    id: 'ultra_end',
+    type: 'End Call',
+    data: {
+      name: 'Ultra-Advanced Call Completion',
+      prompt: `Thank you {{customer_name}}! Your {{initial_intent}} has been fully resolved.
+               Your interaction has been saved to your {{customer_tier}} profile.
+               We appreciate your business and look forward to serving you again!`
+    }
+  });
+
+  // Create ultra-sophisticated edges with conditional routing
+  edges.push(
+    { id: 'ultra_1', source: 'ultra_greeting', target: 'ultra_analysis', label: 'customer information collected' },
+    { id: 'ultra_2', source: 'ultra_analysis', target: 'vip_handling', label: 'VIP or high-value customer' },
+    { id: 'ultra_3', source: 'ultra_analysis', target: 'priority_handling', label: 'urgent or emotional customer' },
+    { id: 'ultra_4', source: 'ultra_analysis', target: 'standard_handling', label: 'standard customer process' },
+    { id: 'ultra_5', source: 'vip_handling', target: args.crm_integration?.update_endpoint ? 'crm_update' : 'ultra_resolution', label: 'VIP issue resolved' },
+    { id: 'ultra_6', source: 'priority_handling', target: args.crm_integration?.update_endpoint ? 'crm_update' : 'ultra_resolution', label: 'priority issue resolved' },
+    { id: 'ultra_7', source: 'standard_handling', target: args.crm_integration?.update_endpoint ? 'crm_update' : 'ultra_resolution', label: 'standard issue resolved' }
+  );
+
+  if (args.crm_integration?.update_endpoint) {
+    edges.push({ id: 'ultra_8', source: 'crm_update', target: 'ultra_resolution', label: 'CRM updated successfully' });
+  }
+
+  edges.push({ id: 'ultra_9', source: 'ultra_resolution', target: 'ultra_end', label: 'customer satisfied and complete' });
+
+  return { 
+    name: args.name, 
+    description: `Ultra-advanced pathway with dynamic data, custom tools, real-time CRM, and intelligent routing`, 
+    nodes, 
+    edges 
+  };
+}

@@ -58,11 +58,11 @@ export interface PathwayEdge {
 
 // Knowledge Base Types
 export interface BlandKnowledgeBase {
-  kb_id: string;
+  vector_id: string;
   name: string;
   description?: string;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
   documents_count?: number;
 }
 

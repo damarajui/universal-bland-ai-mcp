@@ -213,8 +213,30 @@ export class BlandAIClient {
   // Analysis & Intelligence  
   async getCallTranscript(callId: string): Promise<any> {
     try {
-      const response = await this.client.get(`/calls/${callId}/correct`);
-      return response.data;
+      // First try to get the regular call details which includes basic transcript
+      const callResponse = await this.client.get(`/calls/${callId}`);
+      const callData = callResponse.data;
+      
+      // Try to get corrected transcript if available (requires recording to be enabled)
+      let correctedTranscript = null;
+      try {
+        const correctedResponse = await this.client.get(`/calls/${callId}/correct`);
+        correctedTranscript = correctedResponse.data;
+      } catch (correctedError: any) {
+        // Corrected transcript not available, continue with regular transcript
+        console.error(`Corrected transcript not available for call ID ${callId}:`, correctedError.message);
+      }
+      
+      return {
+        call_id: callId,
+        transcript: callData.concatenated_transcript || callData.transcripts || null,
+        corrected_transcript: correctedTranscript,
+        call_details: {
+          duration: callData.call_length,
+          status: callData.status,
+          created_at: callData.created_at
+        }
+      };
     } catch (error: any) {
       console.error(`Get transcript error for call ID ${callId}:`, error.message);
       throw error;
@@ -275,9 +297,12 @@ export class BlandAIClient {
   }
 
   // Knowledge Base Management
-  async createKnowledgeBase(name: string, description?: string): Promise<{ kb_id: string; status: string }> {
+  async createKnowledgeBase(name: string, description?: string, text?: string): Promise<{ vector_id: string }> {
     try {
-      const response = await this.client.post('/knowledge-bases', { name, description });
+      const payload: any = { name };
+      if (description) payload.description = description;
+      if (text) payload.text = text;
+      const response = await this.client.post('/knowledgebases', payload);
       return response.data;
     } catch (error: any) {
       console.error('Create knowledge base error:', error.message);
@@ -287,7 +312,7 @@ export class BlandAIClient {
 
   async uploadKnowledgeBaseText(kbId: string, text: string, metadata?: any): Promise<{ success: boolean }> {
     try {
-      const response = await this.client.post(`/knowledge-bases/${kbId}/upload-text`, { text, metadata });
+      const response = await this.client.post(`/knowledgebases/${kbId}/upload-text`, { text, metadata });
       return response.data;
     } catch (error: any) {
       console.error(`Upload text error for KB ${kbId}:`, error.message);
@@ -297,7 +322,7 @@ export class BlandAIClient {
 
   async uploadKnowledgeBaseMedia(kbId: string, mediaUrl: string, metadata?: any): Promise<{ success: boolean }> {
     try {
-      const response = await this.client.post(`/knowledge-bases/${kbId}/upload-media`, { media_url: mediaUrl, metadata });
+      const response = await this.client.post(`/knowledgebases/${kbId}/upload-media`, { media_url: mediaUrl, metadata });
       return response.data;
     } catch (error: any) {
       console.error(`Upload media error for KB ${kbId}:`, error.message);
@@ -307,8 +332,8 @@ export class BlandAIClient {
 
   async listKnowledgeBases(): Promise<BlandKnowledgeBase[]> {
     try {
-      const response = await this.client.get('/knowledge-bases');
-      return response.data.knowledge_bases || [];
+      const response = await this.client.get('/knowledgebases');
+      return response.data.vectors || [];
     } catch (error: any) {
       console.error('List knowledge bases error:', error.message);
       throw error;
@@ -317,7 +342,7 @@ export class BlandAIClient {
 
   async getKnowledgeBase(kbId: string): Promise<BlandKnowledgeBase> {
     try {
-      const response = await this.client.get(`/knowledge-bases/${kbId}`);
+      const response = await this.client.get(`/knowledgebases/${kbId}`);
       return response.data;
     } catch (error: any) {
       console.error(`Get knowledge base error for ID ${kbId}:`, error.message);
@@ -327,7 +352,7 @@ export class BlandAIClient {
 
   async updateKnowledgeBase(kbId: string, updates: Partial<BlandKnowledgeBase>): Promise<{ success: boolean }> {
     try {
-      const response = await this.client.patch(`/knowledge-bases/${kbId}`, updates);
+      const response = await this.client.patch(`/knowledgebases/${kbId}`, updates);
       return response.data;
     } catch (error: any) {
       console.error(`Update knowledge base error for ID ${kbId}:`, error.message);
@@ -337,7 +362,7 @@ export class BlandAIClient {
 
   async deleteKnowledgeBase(kbId: string): Promise<{ success: boolean }> {
     try {
-      const response = await this.client.delete(`/knowledge-bases/${kbId}`);
+      const response = await this.client.delete(`/knowledgebases/${kbId}`);
       return response.data;
     } catch (error: any) {
       console.error(`Delete knowledge base error for ID ${kbId}:`, error.message);
@@ -501,12 +526,20 @@ export class BlandAIClient {
   // Batch Operations
   async createBatch(phoneNumbers: string[], options: Partial<CallOptions>): Promise<{ batch_id: string }> {
     try {
+      const call_objects = phoneNumbers.map(phone_number => ({ phone_number }));
       const payload = {
-        phone_numbers: phoneNumbers,
-        ...options
+        call_objects,
+        global: options
       };
-      const response = await this.client.post('/batches/create', payload);
-      return response.data;
+      // Use the full URL for v2 API since our base client is v1
+      const response = await axios.post('https://api.bland.ai/v2/batches/create', payload, {
+        headers: {
+          'Authorization': this.apiKey,
+          'Content-Type': 'application/json',
+          ...(this.orgId && { 'Org-Id': this.orgId })
+        }
+      });
+      return { batch_id: response.data.data.batch_id };
     } catch (error: any) {
       console.error('Create batch error:', error.message);
       throw error;
@@ -515,8 +548,15 @@ export class BlandAIClient {
 
   async getBatch(batchId: string): Promise<BlandBatch> {
     try {
-      const response = await this.client.get(`/batches/${batchId}`);
-      return response.data;
+      // Use the full URL for v2 API since our base client is v1
+      const response = await axios.get(`https://api.bland.ai/v2/batches/${batchId}`, {
+        headers: {
+          'Authorization': this.apiKey,
+          'Content-Type': 'application/json',
+          ...(this.orgId && { 'Org-Id': this.orgId })
+        }
+      });
+      return response.data.data;
     } catch (error: any) {
       console.error(`Get batch error for ID ${batchId}:`, error.message);
       throw error;

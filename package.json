@@ -1,6 +1,6 @@
 {
   "name": "universal-bland-ai-mcp-server",
-  "version": "1.4.0",
+  "version": "1.4.2",
   "description": "Model Context Protocol server for Bland AI voice calling platform",
   "type": "module",
   "main": "build/index.js",
@@ -56,12 +56,12 @@
   "license": "ISC",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/inaandamaraju/universal-bland-ai-mcp.git"
+    "url": "git+https://github.com/damarajui/universal-bland-ai-mcp.git"
   },
   "bugs": {
-    "url": "https://github.com/inaandamaraju/universal-bland-ai-mcp/issues"
+    "url": "https://github.com/damarajui/universal-bland-ai-mcp/issues"
   },
-  "homepage": "https://github.com/inaandamaraju/universal-bland-ai-mcp#readme",
+  "homepage": "https://github.com/damarajui/universal-bland-ai-mcp#readme",
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=8.0.0"

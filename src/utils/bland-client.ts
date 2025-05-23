@@ -523,19 +523,25 @@ export class BlandAIClient {
   // Batch Operations
   async createBatch(phoneNumbers: string[], options: Partial<CallOptions>): Promise<{ batch_id: string }> {
     try {
-      const call_objects = phoneNumbers.map(phone_number => ({ phone_number }));
+      // FIXED: Use call_data structure from send-1000-calls docs
+      const call_data = phoneNumbers.map(phone_number => ({ phone_number }));
+      
+      // FIXED: Structure exactly matching Bland docs
       const payload = {
-        call_objects,
-        global: options
+        base_prompt: options.task || "You are making a phone call.",
+        call_data,
+        voice_id: options.voice_id || 0,
+        max_duration: options.max_duration || 10,
+        reduce_latency: options.reduce_latency !== false,
+        wait_for_greeting: options.wait_for_greeting !== false,
+        language: options.language || 'ENG',
+        ...(options.label && { label: options.label }),
+        ...(options.metadata && { metadata: options.metadata })
       };
-      // Use the full URL for v2 API since our base client is v1
-      const response = await axios.post('https://api.bland.ai/v2/batches/create', payload, {
-        headers: {
-          'Authorization': this.apiKey,
-          'Content-Type': 'application/json'
-        }
-      });
-      return { batch_id: response.data.data.batch_id };
+      
+      // FIXED: Use v1/batches endpoint as shown in docs
+      const response = await this.client.post('/batches', payload);
+      return { batch_id: response.data.batch_id };
     } catch (error: any) {
       console.error('Create batch error:', error.message);
       throw error;

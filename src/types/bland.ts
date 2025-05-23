@@ -190,6 +190,7 @@ export interface CallOptions {
   
   // Voice & Audio
   voice?: string;
+  voice_id?: number;
   background_track?: string;
   first_sentence?: string;
   wait_for_greeting?: boolean;
@@ -238,6 +239,7 @@ export interface CallOptions {
   // Audio Processing
   noise_cancellation?: boolean;
   ignore_button_press?: boolean;
+  reduce_latency?: boolean;
   
   // Tools & External APIs
   tools?: any[];
@@ -252,6 +254,7 @@ export interface CallOptions {
   
   // Metadata & Tracking
   metadata?: any;
+  label?: string;
   
   // Enterprise Features
   geospatial_dialing?: string;

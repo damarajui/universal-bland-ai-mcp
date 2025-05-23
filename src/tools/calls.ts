@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { BlandAIClient } from '../utils/bland-client.js';
+import { parseableStringArray, parseableStringObject, parseableStringBoolean, parseableStringNumber } from '../utils/schema-parsers.js';
 
 // Updated PhoneNumberSchema to be more flexible with formatting
 const PhoneNumberSchema = z.string().refine(val => {
@@ -7,6 +8,39 @@ const PhoneNumberSchema = z.string().refine(val => {
   const digits = val.replace(/\D/g, '');
   return digits.length >= 7 && digits.length <= 15; 
 }, 'Invalid phone number format');
+
+// Proper Bland AI Custom Tool Schema
+const CustomToolSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+  api_endpoint: z.string(),
+  input_schema: z.object({
+    type: z.literal('object'),
+    properties: z.record(z.any()),
+    required: z.array(z.string()).optional(),
+    example: z.any().optional()
+  }),
+  speech: z.string().optional(),
+  response_data: z.array(z.object({
+    name: z.string(),
+    data: z.string()
+  })).optional()
+});
+
+// Proper Dynamic Data Schema (matches Bland's structure)
+const DynamicDataSchema = z.object({
+  url: z.string(),
+  method: z.enum(['GET', 'POST']).default('GET'),
+  headers: z.record(z.string()).optional(),
+  query: z.record(z.any()).optional(),
+  body: z.record(z.any()).optional(),
+  cache: z.boolean().optional().default(true),
+  response_data: z.array(z.object({
+    name: z.string(),
+    data: z.string(),
+    context: z.string().optional()
+  })).optional()
+});
 
 export function createUniversalCallTools(blandClient: BlandAIClient) {
   return [
@@ -16,7 +50,9 @@ export function createUniversalCallTools(blandClient: BlandAIClient) {
       inputSchema: z.object({
         phone_number: z.string().min(10).max(15),
         instructions: z.string().min(10).max(2000),
-        voice: z.string().optional().default('maya'),
+        
+        // FIXED: Voice ID - Bland docs show numeric IDs (0) but also support voice names
+        voice_id: z.union([z.string(), z.coerce.number()]).optional().default(0), // Default to 0 per batch docs
         
         // Smart Scheduling
         schedule_for: z.string().optional(),
@@ -45,7 +81,7 @@ export function createUniversalCallTools(blandClient: BlandAIClient) {
         
         // Transfer & Escalation
         transfer_to: z.string().optional(),
-        transfer_conditions: z.array(z.string()).optional(),
+        transfer_conditions: parseableStringArray('transfer_conditions').optional(),
         
         // Voicemail Handling
         voicemail_action: z.enum(['hangup', 'leave_message', 'ignore']).optional().default('hangup'),
@@ -54,20 +90,32 @@ export function createUniversalCallTools(blandClient: BlandAIClient) {
         
         // Integration & Webhooks
         webhook_url: z.string().optional(),
-        external_tools: z.array(z.string()).optional(),
-        live_data_sources: z.array(z.object({
-          name: z.string(),
-          url: z.string(),
-          method: z.enum(['GET', 'POST']).optional().default('GET')
-        })).optional(),
+        
+        // FIXED: Proper Custom Tools Schema
+        custom_tools: z.union([
+          z.string().transform((str) => JSON.parse(str)),
+          z.array(CustomToolSchema)
+        ]).optional(),
+        
+        // FIXED: Proper Dynamic Data Schema (matches Bland's structure)
+        dynamic_data: z.union([
+          z.string().transform((str) => JSON.parse(str)),
+          z.array(DynamicDataSchema)
+        ]).optional(),
         
         // Call Quality & Enhancement
         noise_cancellation: z.coerce.boolean().optional().default(false),
-        pronunciation_guide: z.array(z.object({
-          word: z.string(),
-          pronunciation: z.string()
-        })).optional(),
-        boost_keywords: z.array(z.string()).optional(),
+        
+        // FIXED: Proper pronunciation guide structure
+        pronunciation_guide: z.union([
+          z.string().transform((str) => JSON.parse(str)),
+          z.array(z.object({
+            word: z.string(),
+            pronunciation: z.string()
+          }))
+        ]).optional(),
+        
+        boost_keywords: parseableStringArray('boost_keywords').optional(),
         
         // Enterprise Features
         from_number: z.string().optional(),
@@ -80,7 +128,7 @@ export function createUniversalCallTools(blandClient: BlandAIClient) {
         // Metadata & Tracking
         campaign_id: z.string().optional(),
         custom_data: z.any().optional(),
-        disposition_tags: z.array(z.string()).optional()
+        disposition_tags: parseableStringArray('disposition_tags').optional()
       }),
       handler: async (args: any) => {
         try {
@@ -88,14 +136,18 @@ export function createUniversalCallTools(blandClient: BlandAIClient) {
           const callOptions: any = {
             phone_number: args.phone_number,
             task: args.instructions,
-            voice: args.voice,
+            // FIXED: Handle voice_id properly per Bland docs
+            voice_id: typeof args.voice_id === 'number' ? args.voice_id : 0,
+            voice: typeof args.voice_id === 'string' ? args.voice_id : undefined,
             record: args.record_call,
             max_duration: args.max_duration_minutes,
             wait_for_greeting: args.wait_for_greeting,
             noise_cancellation: args.noise_cancellation,
             temperature: args.creativity_level,
             model: args.model_type,
-            answered_by_enabled: true
+            answered_by_enabled: true,
+            // FIXED: Language parameter - batch docs show both "eng" and "ENG"
+            language: 'ENG'  // Using uppercase as shown in request_data examples
           };
 
           // Handle scheduling
@@ -162,13 +214,14 @@ export function createUniversalCallTools(blandClient: BlandAIClient) {
             callOptions.pronunciation_guide = args.pronunciation_guide;
           }
 
-          // Live data sources
-          if (args.live_data_sources) {
-            callOptions.dynamic_data = args.live_data_sources.map((source: any) => ({
-              url: source.url,
-              method: source.method,
-              name: source.name
-            }));
+          // FIXED: Custom Tools - match Bland's expected structure
+          if (args.custom_tools) {
+            callOptions.tools = args.custom_tools;
+          }
+
+          // FIXED: Dynamic Data - use proper Bland structure
+          if (args.dynamic_data) {
+            callOptions.dynamic_data = args.dynamic_data;
           }
 
           // Enterprise features
@@ -184,10 +237,11 @@ export function createUniversalCallTools(blandClient: BlandAIClient) {
             };
           }
 
-          // Webhook
+          // FIXED: Webhook configuration per Bland docs  
           if (args.webhook_url) {
             callOptions.webhook = args.webhook_url;
-            callOptions.webhook_events = ['call', 'latency', 'tool'];
+            // FIXED: Standard webhook events from docs
+            callOptions.webhook_events = ['call_started', 'call_ended', 'tool_call', 'transcript'];
           }
 
           // Disposition tags
@@ -225,7 +279,7 @@ export function createUniversalCallTools(blandClient: BlandAIClient) {
               emotion_analysis: args.analyze_emotions,
               voicemail_handling: args.voicemail_action !== 'hangup',
               smart_transfer: !!args.transfer_to,
-              live_data: !!args.live_data_sources,
+              live_data: !!args.dynamic_data,
               analysis: !!args.extract_data
             }
           };
@@ -349,53 +403,45 @@ export function createUniversalCallTools(blandClient: BlandAIClient) {
       description: 'Create sophisticated voice campaigns with batch calling, automated follow-ups, and comprehensive analytics',
       inputSchema: z.object({
         campaign_name: z.string(),
-        phone_numbers: z.array(z.string()).min(1).max(10000),
+        phone_numbers: parseableStringArray('phone_numbers'),
         message_template: z.string(),
         
         // Campaign Configuration
         voice: z.string().optional().default('maya'),
-        concurrency: z.coerce.number().min(1).max(100).optional().default(10),
-        call_scheduling: z.object({
-          start_time: z.string().optional(),
-          end_time: z.string().optional(),
-          timezone: z.string().optional(),
-          business_hours_only: z.coerce.boolean().optional().default(true)
-        }).optional(),
+        concurrency: parseableStringNumber('concurrency').pipe(z.number().min(1).max(100)).optional().default(10),
+        call_scheduling: parseableStringObject('call_scheduling').optional(),
         
         // Personalization
-        personalization_data: z.array(z.object({
-          phone_number: z.string(),
-          data: z.any()
-        })).optional(),
+        personalization_data: parseableStringArray('personalization_data').optional(),
         
         // Call Behavior
-        max_duration_minutes: z.coerce.number().optional().default(10),
+        max_duration_minutes: parseableStringNumber('max_duration_minutes').optional().default(10),
         voicemail_strategy: z.enum(['skip', 'leave_message', 'callback']).optional().default('leave_message'),
-        retry_policy: z.object({
-          enabled: z.coerce.boolean().default(false),
-          max_attempts: z.coerce.number().min(1).max(5).optional().default(2),
-          wait_minutes: z.coerce.number().min(60).max(1440).optional().default(240)
-        }).optional(),
+        retry_policy: parseableStringObject('retry_policy').optional(),
         
         // Analytics & Tracking
-        track_conversions: z.coerce.boolean().optional().default(true),
-        disposition_tags: z.array(z.string()).optional(),
+        track_conversions: parseableStringBoolean('track_conversions').optional().default(true),
+        disposition_tags: parseableStringArray('disposition_tags').optional(),
         webhook_url: z.string().optional(),
         
         // Advanced Features
-        local_presence: z.coerce.boolean().optional().default(false),
-        record_calls: z.coerce.boolean().optional().default(false),
-        real_time_coaching: z.coerce.boolean().optional().default(false)
+        local_presence: parseableStringBoolean('local_presence').optional().default(false),
+        record_calls: parseableStringBoolean('record_calls').optional().default(false),
+        real_time_coaching: parseableStringBoolean('real_time_coaching').optional().default(false)
       }),
       handler: async (args: any) => {
         try {
-          // Build call options for the campaign
+          // FIXED: Build call options matching batch API structure from docs
           const campaignOptions: any = {
-            task: args.message_template,
-            voice: args.voice,
+            task: args.message_template,                 // FIXED: Use task (gets converted to base_prompt in client)
+            voice_id: typeof args.voice === 'number' ? args.voice : 0,  // FIXED: Use voice_id
             max_duration: args.max_duration_minutes,
             record: args.record_calls,
             local_dialing: args.local_presence,
+            language: 'ENG',                             // FIXED: Consistent with docs
+            reduce_latency: true,                        // FIXED: Per batch docs
+            wait_for_greeting: false,                    // FIXED: Per batch docs default
+            label: args.campaign_name,                   // FIXED: Use label per batch docs
             metadata: {
               campaign_name: args.campaign_name,
               campaign_id: `campaign_${Date.now()}`

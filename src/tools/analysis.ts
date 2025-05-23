@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { BlandAIClient } from '../utils/bland-client.js';
+import { parseableStringArray } from '../utils/schema-parsers.js';
 
 export function createAnalysisTools(blandClient: BlandAIClient) {
   return [
@@ -40,8 +41,8 @@ export function createAnalysisTools(blandClient: BlandAIClient) {
       name: 'generate_call_report',
       description: 'Generate a comprehensive report for multiple calls',
       inputSchema: z.object({
-        call_ids: z.array(z.string()).optional(),
-        limit: z.number().min(1).max(50).default(10)
+        call_ids: parseableStringArray('call_ids').optional(),
+        limit: z.coerce.number().min(1).max(50).default(10)
       }),
       handler: async (args: any) => {
         let calls;

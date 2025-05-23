@@ -177,8 +177,8 @@ export function createPathwayTools(blandClient: BlandAIClient) {
           }),
           speech: z.string().optional(), // What AI says while executing tool
           response_data: z.array(z.object({
-            variable_name: z.string(),
-            json_path: z.string() // Extract data from tool response
+            name: z.string(),           // FIXED: Match Bland docs
+            data: z.string()            // FIXED: JSON path like "$.calls[0].c_id"
           }))
         })).optional(),
         
@@ -1813,4 +1813,4 @@ function buildUltraAdvancedPathway(args: any): CompletePathway {
     nodes, 
     edges 
   };
-}
+} 

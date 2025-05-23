@@ -28,7 +28,7 @@ const blandClient = new BlandAIClient(BLAND_API_KEY);
 const server = new Server(
   {
     name: process.env.MCP_SERVER_NAME || 'bland-ai-mcp',
-    version: process.env.MCP_SERVER_VERSION || '1.1.1',
+    version: process.env.MCP_SERVER_VERSION || '1.1.2',
   },
   {
     capabilities: {
@@ -129,7 +129,7 @@ async function main() {
   
   console.error('Bland AI MCP Server running on stdio');
   console.error(`Server name: ${process.env.MCP_SERVER_NAME || 'bland-ai-mcp'}`);
-  console.error(`Server version: ${process.env.MCP_SERVER_VERSION || '1.1.1'}`);
+  console.error(`Server version: ${process.env.MCP_SERVER_VERSION || '1.1.2'}`);
 }
 
 // Handle process termination

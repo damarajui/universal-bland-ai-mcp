@@ -343,7 +343,8 @@ export class BlandAIClient {
   async listKnowledgeBases(): Promise<BlandKnowledgeBase[]> {
     try {
       const response = await this.client.get('/knowledgebases');
-      return response.data.vectors || [];
+      // FIXED: API returns { data: { vectors: [...] } } structure
+      return response.data.data?.vectors || [];
     } catch (error: any) {
       console.error('List knowledge bases error:', error.message);
       throw error;

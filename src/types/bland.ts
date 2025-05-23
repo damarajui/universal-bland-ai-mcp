@@ -68,14 +68,19 @@ export interface BlandKnowledgeBase {
 
 // Voice Types  
 export interface BlandVoice {
-  voice_id: string;
+  id: string;
   name: string;
-  voice_type: 'preset' | 'cloned' | 'custom';
+  description?: string;
+  public: boolean;
+  tags?: string[];
+  total_ratings?: number;
+  average_rating?: number;
+  voice_id?: string;
+  voice_type?: 'preset' | 'cloned' | 'custom';
   language?: string;
   gender?: string;
   age?: string;
   created_at?: string;
-  is_public?: boolean;
 }
 
 // Custom Tool Types

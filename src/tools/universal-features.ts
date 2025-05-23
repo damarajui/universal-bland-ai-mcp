@@ -211,9 +211,9 @@ export function createUniversalFeatureTools(blandClient: BlandAIClient) {
               const voices = await blandClient.listVoices();
               
               const categorizedVoices = {
-                preset_voices: voices.filter(v => v.voice_type === 'preset'),
-                cloned_voices: voices.filter(v => v.voice_type === 'cloned'),
-                custom_voices: voices.filter(v => v.voice_type === 'custom')
+                preset_voices: voices.filter(v => v.public && v.tags?.includes('Bland Curated')),
+                cloned_voices: voices.filter(v => !v.public && v.id?.includes('-')),
+                custom_voices: voices.filter(v => !v.public && !v.id?.includes('-'))
               };
               
               return {

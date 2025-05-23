@@ -110,8 +110,8 @@ export function createUniversalCallTools(blandClient: BlandAIClient) {
         pronunciation_guide: z.union([
           z.string().transform((str) => JSON.parse(str)),
           z.array(z.object({
-            word: z.string(),
-            pronunciation: z.string()
+          word: z.string(),
+          pronunciation: z.string()
           }))
         ]).optional(),
         

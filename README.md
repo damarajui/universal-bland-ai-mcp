@@ -2,7 +2,7 @@
 
 Create sophisticated voice AI systems from plain English descriptions. This Model Context Protocol server gives you complete access to Bland AI's voice calling platform through 20 powerful tools.
 
-## What's New in v1.4.0
+## What's New in v1.4.2 
 
 **New Pathway Functions:**
 - Enterprise Sales System with B2B qualification and objection handling
@@ -19,7 +19,7 @@ Create sophisticated voice AI systems from plain English descriptions. This Mode
 **Real Business Examples Tested:**
 - SmileFirst Dental Practice (6 services + global rescheduling)
 - CloudFlow Enterprise Sales (lead scoring + CRM integration)
-- TechCorp AI Support (10 specialists + knowledge base)
+- TechCorp AI Support 
 - Smart Loan Processing (5 decision points + compliance)
 
 ## What This Does
@@ -188,7 +188,7 @@ If pathways still aren't working after checking JSON formatting:
 2. Check that webhook URLs are accessible
 3. Ensure phone numbers are in proper format (+1-XXX-XXX-XXXX)
 4. Review the pathway description for clear customer scenarios
-5. Test with simpler configurations first, then add complexity
+5. Test with simpler configurations first, then add complexity (pathway edit functionality coming SOOON!)
 
 ## Production Deployment
 
@@ -257,3 +257,5 @@ The server uses a modular design:
 ## License
 
 ISC License - use it however you want.
+
+built with hella love for the community 

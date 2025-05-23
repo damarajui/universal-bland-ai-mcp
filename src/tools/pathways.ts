@@ -710,19 +710,19 @@ export function createPathwayTools(blandClient: BlandAIClient) {
         
         // Advanced Voice Settings
         voice_settings: z.object({
-          voice_id: z.union([z.string(), z.coerce.number()]).optional(),
-          speed: z.coerce.number().min(0.5).max(2.0).optional(),
-          interruption_threshold: z.coerce.number().min(0).max(100).optional(),
-          reduce_latency: z.coerce.boolean().default(true)
+                  voice_id: z.union([z.string(), z.coerce.number()]).optional(),
+        speed: z.coerce.number().min(0.5).max(2.0).optional(),
+        interruption_threshold: z.coerce.number().min(0).max(100).optional(),
+        reduce_latency: z.coerce.boolean().default(true)
         }).optional(),
         
         // Call Configuration
         call_settings: z.object({
-          max_duration: z.coerce.number().min(1).max(60).optional(),
-          record: z.coerce.boolean().default(true),
-          wait_for_greeting: z.coerce.boolean().default(true),
-          language: z.string().default('ENG'),
-          answered_by_enabled: z.coerce.boolean().default(true)
+                  max_duration: z.coerce.number().min(1).max(60).optional(),
+        record: z.coerce.boolean().default(true),
+        wait_for_greeting: z.coerce.boolean().default(true),
+        language: z.string().default('ENG'),
+        answered_by_enabled: z.coerce.boolean().default(true)
         }).optional(),
         
         // Transfer Configuration
@@ -1031,10 +1031,10 @@ export function createPathwayTools(blandClient: BlandAIClient) {
           endpoint: z.string().optional()
         })).optional(),
         advanced_features: z.object({
-          variable_extraction: z.coerce.boolean().default(true),
-          conditional_logic: z.coerce.boolean().default(true),
-          global_fallbacks: z.coerce.boolean().default(true),
-          fine_tuning_examples: z.coerce.boolean().default(false)
+                  variable_extraction: z.coerce.boolean().default(true),
+        conditional_logic: z.coerce.boolean().default(true),
+        global_fallbacks: z.coerce.boolean().default(true),
+        fine_tuning_examples: z.coerce.boolean().default(false)
         }).optional()
       }),
       handler: async (args: any) => {

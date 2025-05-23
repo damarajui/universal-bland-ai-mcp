@@ -9,6 +9,15 @@ import { createPathwayTools } from './tools/pathways.js';
 import { createAnalysisTools } from './tools/analysis.js';
 import { createUniversalFeatureTools } from './tools/universal-features.js';
 import dotenv from 'dotenv';
+import { readFileSync } from 'fs';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
+
+// Get package.json version dynamically
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const packageJson = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf8'));
+const SERVER_VERSION = packageJson.version;
 
 // Load environment variables
 dotenv.config();
@@ -28,7 +37,7 @@ const blandClient = new BlandAIClient(BLAND_API_KEY);
 const server = new Server(
   {
     name: process.env.MCP_SERVER_NAME || 'bland-ai-mcp',
-    version: process.env.MCP_SERVER_VERSION || '1.1.2',
+    version: process.env.MCP_SERVER_VERSION || SERVER_VERSION,
   },
   {
     capabilities: {
@@ -129,7 +138,7 @@ async function main() {
   
   console.error('Bland AI MCP Server running on stdio');
   console.error(`Server name: ${process.env.MCP_SERVER_NAME || 'bland-ai-mcp'}`);
-  console.error(`Server version: ${process.env.MCP_SERVER_VERSION || '1.1.2'}`);
+  console.error(`Server version: ${process.env.MCP_SERVER_VERSION || SERVER_VERSION}`);
 }
 
 // Handle process termination

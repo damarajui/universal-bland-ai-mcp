@@ -146,7 +146,20 @@ export class BlandAIClient {
   async listPathways(): Promise<BlandPathway[]> {
     try {
       const response = await this.client.get('/pathway');
-      return response.data.pathways || [];
+      
+      // FIXED: Bland AI returns a direct array of pathways, not a nested object
+      if (response.data && Array.isArray(response.data)) {
+        // Map the response to our expected interface structure
+        return response.data.map(pathway => ({
+          pathway_id: pathway.id,  // FIXED: API uses 'id', we expect 'pathway_id'
+          name: pathway.name,
+          description: pathway.description || '',
+          created_at: pathway.created_at || new Date().toISOString(),
+          updated_at: pathway.updated_at || new Date().toISOString()
+        }));
+      }
+      
+      return [];
     } catch (error: any) {
       console.error('List pathways error:', error.message);
       throw error;
